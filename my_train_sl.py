@@ -13,14 +13,16 @@ from cords.utils.config_utils import load_config_data
 from cords.utils.data.data_utils import WeightedSubset
 from cords.utils.data.dataloader.SL.adaptive import GLISTERDataLoader, OLRandomDataLoader, \
     CRAIGDataLoader, GradMatchDataLoader, RandomDataLoader
+from cords.utils.data.dataloader.SL.nonadaptive import FacLocDataLoader
 from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
-
+from cords.utils.data.data_utils.collate import *
 
 class TrainClassifier:
-    def __init__(self, config_file):
-        self.config_file = config_file
-        self.cfg = load_config_data(self.config_file)
+    def __init__(self, config_file_data):
+        # self.config_file = config_file
+        # self.cfg = load_config_data(self.config_file)
+        self.cfg = config_file_data
         results_dir = osp.abspath(osp.expanduser(self.cfg.train_args.results_dir))
         all_logs_dir = os.path.join(results_dir, self.cfg.setting,
                                     self.cfg.dss_args.type,
@@ -80,6 +82,9 @@ class TrainClassifier:
             model = MobileNet2(output_size=self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'HyperParamNet':
             model = HyperParamNet(self.cfg.model.l1, self.cfg.model.l2)
+        elif self.cfg.model.architecture == 'LSTM':
+            model = LSTMClassifier(self.cfg.model.numclasses, self.cfg.model.wordvec_dim, \
+                 self.cfg.model.weight_path, self.cfg.model.num_layers, self.cfg.model.hidden_size)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -107,6 +112,8 @@ class TrainClassifier:
         if self.cfg.scheduler.type == 'cosine_annealing':
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                                    T_max=self.cfg.scheduler.T_max)
+        else:
+            scheduler = None
         return optimizer, scheduler
 
     @staticmethod
@@ -116,7 +123,7 @@ class TrainClassifier:
         for i in range(len(mod_timing)):
             tmp += mod_timing[i]
             mod_cum_timing[i] = tmp
-        return mod_cum_timing / 3600
+        return mod_cum_timing
 
     @staticmethod
     def save_ckpt(state, ckpt_path):
@@ -142,25 +149,25 @@ class TrainClassifier:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
-                                                               classimb_ratio=self.cfg.dataset.classimb_ratio)
+                                                               classimb_ratio=self.cfg.dataset.classimb_ratio, dataset=self.cfg.dataset)
         else:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
-                                                               self.cfg.dataset.feature)
+                                                               self.cfg.dataset.feature, dataset=self.cfg.dataset)
 
         trn_batch_size = self.cfg.dataloader.batch_size
         val_batch_size = self.cfg.dataloader.batch_size
-        tst_batch_size = 1000
+        tst_batch_size = self.cfg.dataloader.batch_size
 
         # Creating the Data Loaders
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=trn_batch_size,
-                                                  shuffle=False, pin_memory=True)
+                                                  shuffle=False, pin_memory=True, collate_fn = self.cfg.dataloader.collate_fn)
 
         valloader = torch.utils.data.DataLoader(validset, batch_size=val_batch_size,
-                                                shuffle=False, pin_memory=True)
+                                                shuffle=False, pin_memory=True, collate_fn = self.cfg.dataloader.collate_fn)
 
         testloader = torch.utils.data.DataLoader(testset, batch_size=tst_batch_size,
-                                                 shuffle=False, pin_memory=True)
+                                                 shuffle=False, pin_memory=True, collate_fn = self.cfg.dataloader.collate_fn)
 
         substrn_losses = list()  # np.zeros(configdata['train_args']['num_epochs'])
         trn_losses = list()
@@ -197,6 +204,9 @@ class TrainClassifier:
         ############################## Custom Dataloader Creation ##############################
         """
 
+        if not 'collate_fn' in self.cfg.dss_args:
+                self.cfg.dss_args.collate_fn = None
+
         if self.cfg.dss_args.type in ['GradMatch', 'GradMatchPB', 'GradMatch-Warm', 'GradMatchPB-Warm']:
             """
             ############################## GradMatch Dataloader Additional Arguments ##############################
@@ -211,7 +221,8 @@ class TrainClassifier:
             dataloader = GradMatchDataLoader(trainloader, valloader, self.cfg.dss_args, logger,
                                              batch_size=self.cfg.dataloader.batch_size,
                                              shuffle=self.cfg.dataloader.shuffle,
-                                             pin_memory=self.cfg.dataloader.pin_memory)
+                                             pin_memory=self.cfg.dataloader.pin_memory,
+                                             collate_fn = self.cfg.dss_args.collate_fn)
 
         elif self.cfg.dss_args.type in ['GLISTER', 'GLISTER-Warm', 'GLISTERPB', 'GLISTERPB-Warm']:
             """
@@ -253,7 +264,8 @@ class TrainClassifier:
             dataloader = RandomDataLoader(trainloader, self.cfg.dss_args, logger,
                                           batch_size=self.cfg.dataloader.batch_size,
                                           shuffle=self.cfg.dataloader.shuffle,
-                                          pin_memory=self.cfg.dataloader.pin_memory)
+                                          pin_memory=self.cfg.dataloader.pin_memory, 
+                                          collate_fn = self.cfg.dss_args.collate_fn)
 
         elif self.cfg.dss_args.type == ['OLRandom', 'OLRandom-Warm']:
             """
@@ -265,7 +277,22 @@ class TrainClassifier:
             dataloader = OLRandomDataLoader(trainloader, self.cfg.dss_args, logger,
                                             batch_size=self.cfg.dataloader.batch_size,
                                             shuffle=self.cfg.dataloader.shuffle,
-                                            pin_memory=self.cfg.dataloader.pin_memory)
+                                            pin_memory=self.cfg.dataloader.pin_memory,
+                                            collate_fn = self.cfg.dss_args.collate_fn)
+
+        elif self.cfg.dss_args.type == 'FacLoc':
+            """
+            ############################## Facility Location Dataloader Additional Arguments ##############################
+            """
+            wt_trainset = WeightedSubset(trainset, list(range(len(trainset))), [1] * len(trainset))
+            self.cfg.dss_args.device = self.cfg.train_args.device
+            self.cfg.dss_args.model = model
+            self.cfg.dss_args.data_type = self.cfg.dataset.type
+            dataloader = FacLocDataLoader(trainloader, valloader, self.cfg.dss_args, logger, 
+                                          batch_size=self.cfg.dataloader.batch_size,
+                                          shuffle=self.cfg.dataloader.shuffle,
+                                          pin_memory=self.cfg.dataloader.pin_memory, 
+                                          collate_fn = self.cfg.dss_args.collate_fn)
 
         elif self.cfg.dss_args.type == 'Full':
             """
@@ -276,7 +303,8 @@ class TrainClassifier:
             dataloader = torch.utils.data.DataLoader(wt_trainset,
                                                      batch_size=self.cfg.dataloader.batch_size,
                                                      shuffle=self.cfg.dataloader.shuffle,
-                                                     pin_memory=self.cfg.dataloader.pin_memory)
+                                                     pin_memory=self.cfg.dataloader.pin_memory,
+                                                     collate_fn=self.cfg.dss_args.collate_fn)
 
         """
         ################################################# Checkpoint Loading #################################################
@@ -332,7 +360,8 @@ class TrainClassifier:
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
             epoch_time = time.time() - start_time
-            scheduler.step()
+            if not scheduler == None:
+                scheduler.step()
             timing.append(epoch_time)
             print_args = self.cfg.train_args.print_args
 
@@ -340,7 +369,7 @@ class TrainClassifier:
             ################################################# Evaluation Loop #################################################
             """
 
-            if (epoch + 1) % self.cfg.train_args.print_every == 0:
+            if ((epoch + 1) % self.cfg.train_args.print_every == 0) or (epoch == self.cfg.train_args.num_epochs - 1):
                 trn_loss = 0
                 trn_correct = 0
                 trn_total = 0
