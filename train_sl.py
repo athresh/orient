@@ -12,7 +12,7 @@ from torch.utils.data import Subset
 from cords.utils.config_utils import load_config_data
 from cords.utils.data.data_utils import WeightedSubset
 from cords.utils.data.dataloader.SL.adaptive import GLISTERDataLoader, OLRandomDataLoader, \
-    CRAIGDataLoader, GradMatchDataLoader, RandomDataLoader
+    CRAIGDataLoader, GradMatchDataLoader, RandomDataLoader, SMIDataLoader
 from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
 
@@ -278,6 +278,22 @@ class TrainClassifier:
                                                      shuffle=self.cfg.dataloader.shuffle,
                                                      pin_memory=self.cfg.dataloader.pin_memory)
 
+        elif self.cfg.dss_args.type == 'SMI':
+            """
+            
+            """
+            print("In SMI train_sl")
+            self.cfg.dss_args.model = model
+            self.cfg.dss_args.loss = criterion_nored
+            self.cfg.dss_args.eta = self.cfg.optimizer.lr
+            self.cfg.dss_args.num_classes = self.cfg.model.numclasses
+            self.cfg.dss_args.num_epochs = self.cfg.train_args.num_epochs
+            self.cfg.dss_args.device = self.cfg.train_args.device
+
+            dataloader = SMIDataLoader(trainloader, valloader, self.cfg.dss_args, logger,
+                                             batch_size=self.cfg.dataloader.batch_size,
+                                             shuffle=self.cfg.dataloader.shuffle,
+                                             pin_memory=self.cfg.dataloader.pin_memory)
         """
         ################################################# Checkpoint Loading #################################################
         """
