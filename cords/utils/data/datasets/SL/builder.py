@@ -1357,3 +1357,63 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
         valset = SSTDataset(datadir, 'dev', num_cls, wordvec_dim, wordvec)
 
         return trainset, valset, testset, num_cls
+    elif dset_name == "toy_smi":
+        np.random.seed(42)
+        trn_file = os.path.join(datadir, dset_name + '.trn')
+        val_file = os.path.join(datadir, dset_name + '.val')
+        tst_file = os.path.join(datadir, dset_name + '.tst')
+        data_dims = 2
+        num_cls = 2
+        x_trn, y_trn = csv_file_load(trn_file, dim=data_dims)
+        x_val, y_val = csv_file_load(val_file, dim=data_dims)
+        x_tst, y_tst = csv_file_load(tst_file, dim=data_dims)
+
+        sc = StandardScaler()
+        x_trn = sc.fit_transform(x_trn)
+        x_val = sc.transform(x_val)
+        x_tst = sc.transform(x_tst)
+
+        if feature == 'classimb':
+            x_trn, y_trn, x_val, y_val, x_tst, y_tst = create_imbalance(x_trn, y_trn, x_val, y_val, x_tst, y_tst,
+                                                                        num_cls, kwargs['classimb_ratio'])
+
+        elif feature == 'noise':
+            y_trn = create_noisy(y_trn, num_cls)
+
+        if isnumpy:
+            fullset = (x_trn, y_trn)
+            valset = (x_val, y_val)
+            testset = (x_tst, y_tst)
+
+        else:
+            fullset = CustomDataset(torch.from_numpy(x_trn), torch.from_numpy(y_trn))
+            valset = CustomDataset(torch.from_numpy(x_val), torch.from_numpy(y_val))
+            testset = CustomDataset(torch.from_numpy(x_tst), torch.from_numpy(y_tst))
+
+        return fullset, valset, testset, num_cls
+    elif dset_name == 'synthetic_covariate':
+        np.random.seed(42)
+        trn_file = os.path.join(datadir, dset_name + '.trn')
+        val_file = os.path.join(datadir, dset_name + '.val')
+        tst_file = os.path.join(datadir, dset_name + '.tst')
+        data_dims = 2
+        num_cls = 2
+        x_trn, y_trn = csv_file_load(trn_file, dim=data_dims)
+        x_val, y_val = csv_file_load(val_file, dim=data_dims)
+        x_tst, y_tst = csv_file_load(tst_file, dim=data_dims)
+
+#         sc = StandardScaler()
+#         x_trn = sc.fit_transform(x_trn)
+#         x_val = sc.transform(x_val)
+#         x_tst = sc.transform(x_tst)
+
+        if isnumpy:
+            fullset = (x_trn, y_trn)
+            valset = (x_val, y_val)
+            testset = (x_tst, y_tst)
+
+        else:
+            fullset = CustomDataset(torch.from_numpy(x_trn), torch.from_numpy(y_trn))
+            valset = CustomDataset(torch.from_numpy(x_val), torch.from_numpy(y_val))
+            testset = CustomDataset(torch.from_numpy(x_tst), torch.from_numpy(y_tst))
+        return fullset, valset, testset, num_cls

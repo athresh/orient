@@ -15,6 +15,7 @@ from cords.utils.data.dataloader.SL.adaptive import GLISTERDataLoader, OLRandomD
     CRAIGDataLoader, GradMatchDataLoader, RandomDataLoader, SMIDataLoader
 from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
+import matplotlib.pyplot as plt
 
 
 class TrainClassifier:
@@ -27,8 +28,13 @@ class TrainClassifier:
                                     self.cfg.dataset.name,
                                     str(self.cfg.dss_args.fraction),
                                     str(self.cfg.dss_args.select_every))
-
+        self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
+                                    self.cfg.dss_args.type,
+                                    self.cfg.dataset.name,
+                                    str(self.cfg.dss_args.fraction),
+                                    str(self.cfg.dss_args.select_every))
         os.makedirs(all_logs_dir, exist_ok=True)
+        os.makedirs(self.all_plots_dir, exist_ok=True)
         # setup logger
         plain_formatter = logging.Formatter("[%(asctime)s] %(name)s %(levelname)s: %(message)s",
                                             datefmt="%m/%d %H:%M:%S")
@@ -80,6 +86,8 @@ class TrainClassifier:
             model = MobileNet2(output_size=self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'HyperParamNet':
             model = HyperParamNet(self.cfg.model.l1, self.cfg.model.l2)
+        elif self.cfg.model.architecture == 'logreg_net':
+            model = LogisticRegNet(self.cfg.model.numclasses, self.cfg.model.input_dim)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -282,7 +290,6 @@ class TrainClassifier:
             """
             
             """
-            print("In SMI train_sl")
             self.cfg.dss_args.model = model
             self.cfg.dss_args.loss = criterion_nored
             self.cfg.dss_args.eta = self.cfg.optimizer.lr
@@ -333,6 +340,8 @@ class TrainClassifier:
             subtrn_total = 0
             model.train()
             start_time = time.time()
+            if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+                plt.figure()
             for _, (inputs, targets, weights) in enumerate(dataloader):
                 inputs = inputs.to(self.cfg.train_args.device)
                 targets = targets.to(self.cfg.train_args.device, non_blocking=True)
@@ -347,6 +356,12 @@ class TrainClassifier:
                 _, predicted = outputs.max(1)
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
+                if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c='red',
+                            s=25, edgecolor='k')
+            if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+                plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
+                plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
             epoch_time = time.time() - start_time
             scheduler.step()
             timing.append(epoch_time)
