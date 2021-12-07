@@ -27,3 +27,6 @@ examples/SL/data/conv_shift_clf_2/conv_shift_clf_2.trn
 examples/SL/data/conv_shift_clf_2/conv_shift_clf_2.tst
 examples/SL/data/conv_shift_clf_2/conv_shift_clf_2.val
 examples/SL/image_classification/smi_toy.py
+*.tst
+*.trn
+*.val

@@ -1,5 +1,7 @@
 import numpy as np
 import os
+from collections import defaultdict
+
 import torch
 import torchvision
 from sklearn import datasets
@@ -13,6 +15,10 @@ import re
 import pandas as pd
 import torch
 import torchtext.data
+from wilds import get_dataset
+from wilds.common.data_loaders import get_train_loader
+import torchvision.transforms as transforms
+from transformers import BertTokenizerFast, DistilBertTokenizerFast
 
 
 def clean_data(sentence):
@@ -139,6 +145,42 @@ class CustomDataset_WithId(Dataset):
             sample_data = self.transform(sample_data)
         return sample_data, label, idx  # .astype('float32')
 
+## Utility function for processing NLP datasets
+def initialize_bert_transform(model, max_token_length):
+    assert 'bert' in model
+    assert max_token_length is not None
+
+    tokenizer = DistilBertTokenizerFast.from_pretrained(model)
+    def transform(text):
+        tokens = tokenizer(
+            text,
+            padding='max_length',
+            truncation=True,
+            max_length=max_token_length,
+            return_tensors='pt')
+        if model == 'bert-base-uncased':
+            x = torch.stack(
+                (tokens['input_ids'],
+                 tokens['attention_mask'],
+                 tokens['token_type_ids']),
+                dim=2)
+        elif model == 'distilbert-base-uncased':
+            x = torch.stack(
+                (tokens['input_ids'],
+                 tokens['attention_mask']),
+                dim=2)
+        x = torch.squeeze(x, dim=0) # First shape dim is always 1
+        return x
+    return transform
+def getBertTokenizer(model):
+    if model == 'bert-base-uncased':
+        tokenizer = BertTokenizerFast.from_pretrained(model)
+    elif model == 'distilbert-base-uncased':
+        tokenizer = DistilBertTokenizerFast.from_pretrained(model)
+    else:
+        raise ValueError(f'Model: {model} not recognized.')
+
+    return tokenizer
 
 ## Utility function to load datasets from libsvm datasets
 def csv_file_load(path, dim, save_data=False):
@@ -1417,3 +1459,16 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
             valset = CustomDataset(torch.from_numpy(x_val), torch.from_numpy(y_val))
             testset = CustomDataset(torch.from_numpy(x_tst), torch.from_numpy(y_tst))
         return fullset, valset, testset, num_cls
+
+    elif dset_name == 'civilcomments':
+        full_dataset = get_dataset(dataset='civilcomments', root_dir=datadir, download=True, split_scheme='official')
+        transform = initialize_bert_transform(model='distilbert-base-uncased', max_token_length=300)
+        for split in full_dataset.split_dict.keys():
+            if split == 'train':
+                trainset = full_dataset.get_subset(split, transform=transform)
+            elif split == 'val':
+                valset = full_dataset.get_subset(split, transform=transform)
+            else:
+                testset = full_dataset.get_subset(split, transform=transform)
+
+        return trainset, valset, testset, full_dataset.n_classes

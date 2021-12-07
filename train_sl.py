@@ -16,6 +16,7 @@ from cords.utils.data.dataloader.SL.adaptive import GLISTERDataLoader, OLRandomD
 from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
 import matplotlib.pyplot as plt
+from wilds.common.data_loaders import get_train_loader, get_eval_loader
 
 
 class TrainClassifier:
@@ -29,10 +30,10 @@ class TrainClassifier:
                                     str(self.cfg.dss_args.fraction),
                                     str(self.cfg.dss_args.select_every))
         self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
-                                    self.cfg.dss_args.type,
-                                    self.cfg.dataset.name,
-                                    str(self.cfg.dss_args.fraction),
-                                    str(self.cfg.dss_args.select_every))
+                                          self.cfg.dss_args.type,
+                                          self.cfg.dataset.name,
+                                          str(self.cfg.dss_args.fraction),
+                                          str(self.cfg.dss_args.select_every))
         os.makedirs(all_logs_dir, exist_ok=True)
         os.makedirs(self.all_plots_dir, exist_ok=True)
         # setup logger
@@ -88,6 +89,9 @@ class TrainClassifier:
             model = HyperParamNet(self.cfg.model.l1, self.cfg.model.l2)
         elif self.cfg.model.architecture == 'logreg_net':
             model = LogisticRegNet(self.cfg.model.numclasses, self.cfg.model.input_dim)
+        elif self.cfg.model.architecture == 'distilbert':
+            model = DistilBertClassifier.from_pretrained('distilbert-base-uncased',
+                                                         num_labels=self.cfg.model.numclasses)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -161,14 +165,22 @@ class TrainClassifier:
         tst_batch_size = 1000
 
         # Creating the Data Loaders
-        trainloader = torch.utils.data.DataLoader(trainset, batch_size=trn_batch_size,
-                                                  shuffle=False, pin_memory=True)
+        if self.cfg.dataset.name in ['civilcomments']:
+            trainloader = get_train_loader(loader='standard', dataset=trainset, batch_size=trn_batch_size,
+                                           pin_memory=True)
+            valloader = get_eval_loader(loader='standard', dataset=validset, batch_size=val_batch_size,
+                                        pin_memory=True)
+            testloader = get_eval_loader(loader='standard', dataset=testset, batch_size=tst_batch_size,
+                                         pin_memory=True)
+        else:
+            trainloader = torch.utils.data.DataLoader(trainset, batch_size=trn_batch_size,
+                                                      shuffle=False, pin_memory=True)
 
-        valloader = torch.utils.data.DataLoader(validset, batch_size=val_batch_size,
-                                                shuffle=False, pin_memory=True)
+            valloader = torch.utils.data.DataLoader(validset, batch_size=val_batch_size,
+                                                    shuffle=False, pin_memory=True)
 
-        testloader = torch.utils.data.DataLoader(testset, batch_size=tst_batch_size,
-                                                 shuffle=False, pin_memory=True)
+            testloader = torch.utils.data.DataLoader(testset, batch_size=tst_batch_size,
+                                                     shuffle=False, pin_memory=True)
 
         substrn_losses = list()  # np.zeros(configdata['train_args']['num_epochs'])
         trn_losses = list()
@@ -288,7 +300,7 @@ class TrainClassifier:
 
         elif self.cfg.dss_args.type == 'SMI':
             """
-            
+
             """
             self.cfg.dss_args.model = model
             self.cfg.dss_args.loss = criterion_nored
@@ -298,9 +310,9 @@ class TrainClassifier:
             self.cfg.dss_args.device = self.cfg.train_args.device
 
             dataloader = SMIDataLoader(trainloader, valloader, self.cfg.dss_args, logger,
-                                             batch_size=self.cfg.dataloader.batch_size,
-                                             shuffle=self.cfg.dataloader.shuffle,
-                                             pin_memory=self.cfg.dataloader.pin_memory)
+                                       batch_size=self.cfg.dataloader.batch_size,
+                                       shuffle=self.cfg.dataloader.shuffle,
+                                       pin_memory=self.cfg.dataloader.pin_memory)
         """
         ################################################# Checkpoint Loading #################################################
         """
@@ -340,9 +352,10 @@ class TrainClassifier:
             subtrn_total = 0
             model.train()
             start_time = time.time()
-            if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.figure()
-            for _, (inputs, targets, weights) in enumerate(dataloader):
+            for _, (inputs, targets, domains, weights) in enumerate(dataloader):
+                #             for _, (inputs, targets, weights) in enumerate(dataloader):
                 inputs = inputs.to(self.cfg.train_args.device)
                 targets = targets.to(self.cfg.train_args.device, non_blocking=True)
                 weights = weights.to(self.cfg.train_args.device)
@@ -356,10 +369,10 @@ class TrainClassifier:
                 _, predicted = outputs.max(1)
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
-                if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+                if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                     plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c='red',
-                            s=25, edgecolor='k')
-            if self.cfg.train_args.visualize and (epoch+1) % self.cfg.dss_args.select_every == 0:
+                                s=25, edgecolor='k')
+            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
                 plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
             epoch_time = time.time() - start_time
@@ -385,7 +398,8 @@ class TrainClassifier:
 
                 if ("trn_loss" in print_args) or ("trn_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets) in enumerate(trainloader):
+                        for _, (inputs, targets, domains) in enumerate(trainloader):
+                            #                         for _, (inputs, targets) in enumerate(trainloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
                             outputs = model(inputs)
@@ -402,7 +416,8 @@ class TrainClassifier:
 
                 if ("val_loss" in print_args) or ("val_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets) in enumerate(valloader):
+                        for _, (inputs, targets, domains) in enumerate(valloader):
+                            #                         for _, (inputs, targets) in enumerate(valloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
                             outputs = model(inputs)
@@ -419,7 +434,8 @@ class TrainClassifier:
 
                 if ("tst_loss" in print_args) or ("tst_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets) in enumerate(testloader):
+                        for _, (inputs, targets, domains) in enumerate(testloader):
+                            #                         for _, (inputs, targets) in enumerate(testloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
                             outputs = model(inputs)
