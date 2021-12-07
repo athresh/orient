@@ -30,3 +30,4 @@ examples/SL/image_classification/smi_toy.py
 *.tst
 *.trn
 *.val
+*.out
