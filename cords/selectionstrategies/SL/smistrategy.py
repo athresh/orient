@@ -77,8 +77,8 @@ class SMIStrategy(DataSelectionStrategy):
             trainloader = self.trainloader
             if valid:
                 valloader = self.valloader
-            
-        for batch_idx, (inputs, targets) in enumerate(trainloader):
+        for batch_idx, (inputs, targets, domains) in enumerate(trainloader):
+        # for batch_idx, (inputs, targets) in enumerate(trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
             if batch_idx == 0:
                 out, l1 = self.model(inputs, last=True, freeze=True)
@@ -115,7 +115,8 @@ class SMIStrategy(DataSelectionStrategy):
             self.grads_per_elem = l0_grads
 
         if valid:
-            for batch_idx, (inputs, targets) in enumerate(valloader):
+            for batch_idx, (inputs, targets, domains) in enumerate(valloader):
+            # for batch_idx, (inputs, targets) in enumerate(valloader):
                 inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
                 if batch_idx == 0:
                     out, l1 = self.model(inputs, last=True, freeze=True)

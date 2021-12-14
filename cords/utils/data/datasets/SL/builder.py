@@ -1461,8 +1461,8 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
         return fullset, valset, testset, num_cls
 
     elif dset_name == 'civilcomments':
-        full_dataset = get_dataset(dataset='civilcomments', root_dir=datadir, download=True, split_scheme='official')
-        transform = initialize_bert_transform(model='distilbert-base-uncased', max_token_length=300)
+        full_dataset = get_dataset(dataset='civilcomments', root_dir=datadir, download=False, split_scheme='official')
+        transform = initialize_bert_transform(model='distilbert-base-uncased', max_token_length=150)
         for split in full_dataset.split_dict.keys():
             if split == 'train':
                 trainset = full_dataset.get_subset(split, transform=transform)

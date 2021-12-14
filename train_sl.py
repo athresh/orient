@@ -115,6 +115,9 @@ class TrainClassifier:
             optimizer = optim.Adam(model.parameters(), lr=self.cfg.optimizer.lr)
         elif self.cfg.optimizer.type == "rmsprop":
             optimizer = optim.RMSprop(model.parameters(), lr=self.cfg.optimizer.lr)
+        elif self.cfg.optimizer.type == "adamw":
+            optimizer = optim.AdamW(model.parameters(), lr=self.cfg.optimizer.lr,
+                                    weight_decay=self.cfg.optimizer.weight_decay)
 
         if self.cfg.scheduler.type == 'cosine_annealing':
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
@@ -352,8 +355,8 @@ class TrainClassifier:
             subtrn_total = 0
             model.train()
             start_time = time.time()
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                plt.figure()
+            # if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+            #     plt.figure()
             for _, (inputs, targets, domains, weights) in enumerate(dataloader):
                 #             for _, (inputs, targets, weights) in enumerate(dataloader):
                 inputs = inputs.to(self.cfg.train_args.device)
@@ -369,12 +372,12 @@ class TrainClassifier:
                 _, predicted = outputs.max(1)
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
-                if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c='red',
-                                s=25, edgecolor='k')
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
-                plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
+            #     if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+            #         plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c='red',
+            #                     s=25, edgecolor='k')
+            # if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+            #     plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
+            #     plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
             epoch_time = time.time() - start_time
             scheduler.step()
             timing.append(epoch_time)
