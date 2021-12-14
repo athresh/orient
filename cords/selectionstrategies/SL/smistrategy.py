@@ -26,7 +26,8 @@ class SMIStrategy(DataSelectionStrategy):
         self.eta = eta
         self.stopIfZeroGain = stopIfZeroGain
         self.stopIfNegativeGain = stopIfNegativeGain
-        self.query_size = len(valloader.dataset)/len(valloader)
+        # self.query_size = len(valloader.dataset)/len(valloader)
+        self.query_size = np.ceil(0.001*len(trainloader.dataset))
         self.verbose = verbose
     
     def compute_gradients(self, valid=False, perBatch=False, perClass=False):
@@ -129,10 +130,10 @@ class SMIStrategy(DataSelectionStrategy):
                         l0_grads = l0_grads.mean(dim=0).view(1, -1)
                         if self.linear_layer:
                             l1_grads = l1_grads.mean(dim=0).view(1, -1)
-                    if self.linear_layer:
-                        self.query_grads_per_elem = torch.cat((l0_grads, l1_grads), dim=1)
-                    else:
-                        self.query_grads_per_elem = l0_grads
+                    # if self.linear_layer:
+                    #     self.query_grads_per_elem = torch.cat((l0_grads, l1_grads), dim=1)
+                    # else:
+                    #     self.query_grads_per_elem = l0_grads
                 else:
                     out, l1 = self.model(inputs, last=True, freeze=True)
                     loss = self.loss(out, targets).sum()
@@ -153,6 +154,8 @@ class SMIStrategy(DataSelectionStrategy):
                 self.val_grads_per_elem = torch.cat((l0_grads, l1_grads), dim=1)
             else:
                 self.val_grads_per_elem = l0_grads
+
+            self.query_grads_per_elem = self.val_grads_per_elem[0:self.query_size, :]
 
     def select(self, budget, model_params):
         """
@@ -217,7 +220,7 @@ class SMIStrategy(DataSelectionStrategy):
             
             if self.smi_func_type == 'fl1mi':
                 obj = submodlib.FacilityLocationMutualInformationFunction(n=self.N_trn,
-                                                                num_queries=self.N_val,
+                                                                num_queries=self.query_size,
                                                                 data_sijs=data_sijs,
                                                                 query_sijs=query_sijs,
                                                                 magnificationEta=self.eta)

@@ -33,7 +33,7 @@ config = dict(setting="SL",
               dss_args=dict(type="Full",
                             verbose=True),
 
-              train_args=dict(num_epochs=300,
+              train_args=dict(num_epochs=10,
                               device="cuda",
                               print_every=10,
                               results_dir='results/',
