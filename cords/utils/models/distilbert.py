@@ -27,7 +27,6 @@ class DistilBertClassifier(DistilBertForSequenceClassification):
                 pooled_output = self.pre_classifier(pooled_output)  # (bs, dim)
                 pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
                 e = self.dropout(pooled_output)  # (bs, dim)
-                logits = self.classifier(e)  # (bs, num_labels)
         else:
             distilbert_output = self.distilbert(
                 input_ids=input_ids,
@@ -38,7 +37,7 @@ class DistilBertClassifier(DistilBertForSequenceClassification):
             pooled_output = self.pre_classifier(pooled_output)  # (bs, dim)
             pooled_output = nn.ReLU()(pooled_output)  # (bs, dim)
             e = self.dropout(pooled_output)  # (bs, dim)
-            logits = self.classifier(e)  # (bs, num_labels)
+        logits = self.classifier(e)  # (bs, num_labels)
         if last:
             return logits, e
         else:
