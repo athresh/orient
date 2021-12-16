@@ -27,7 +27,7 @@ class SMIStrategy(DataSelectionStrategy):
         self.stopIfZeroGain = stopIfZeroGain
         self.stopIfNegativeGain = stopIfNegativeGain
         # self.query_size = len(valloader.dataset)/len(valloader)
-        self.query_size = np.ceil(0.001*len(trainloader.dataset))
+        self.query_size = int(np.ceil(0.001*len(trainloader.dataset)))
         self.verbose = verbose
     
     def compute_gradients(self, valid=False, perBatch=False, perClass=False):
