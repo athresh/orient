@@ -1,4 +1,3 @@
-# Learning setting
 config = dict(setting="SL",
 
               dataset=dict(name="civilcomments",
@@ -17,10 +16,10 @@ config = dict(setting="SL",
               ckpt=dict(is_load=False,
                         is_save=True,
                         dir='results/',
-                        save_every=20),
+                        save_every=5),
 
               loss=dict(type='CrossEntropyLoss',
-                        use_sigmoid=False),
+                        use_sigmoid=True),
 
               optimizer=dict(type="sgd",
                              momentum=0.9,
@@ -30,15 +29,16 @@ config = dict(setting="SL",
               scheduler=dict(type="cosine_annealing",
                              T_max=300),
 
-              dss_args=dict(type="Full",
-                            verbose=True),
+              dss_args=dict(type="Random",
+                                fraction=0.1,
+                                select_every=2,
+                                kappa=0),
 
               train_args=dict(num_epochs=10,
                               device="cuda",
                               print_every=1,
                               results_dir='results/',
                               print_args=["val_loss", "val_acc", "tst_loss", "tst_acc", "worst_acc", "time"],
-                              return_args=[],
-                              visualize=False
+                              return_args=[]
                               )
               )

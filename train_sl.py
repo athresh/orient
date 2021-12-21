@@ -17,12 +17,61 @@ from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
 import matplotlib.pyplot as plt
 from wilds.common.data_loaders import get_train_loader, get_eval_loader
+from wilds.common.metrics.all_metrics import Accuracy
+
+
+def move_to(obj, device):
+    if isinstance(obj, dict):
+        return {k: move_to(v, device) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [move_to(v, device) for v in obj]
+    elif isinstance(obj, float) or isinstance(obj, int):
+        return obj
+    else:
+        # Assume obj is a Tensor or other type
+        # (like Batch, for MolPCBA) that supports .to(device)
+        return obj.to(device)
+
+
+def collate_list(vec):
+    """
+    If vec is a list of Tensors, it concatenates them all along the first dimension.
+    If vec is a list of lists, it joins these lists together, but does not attempt to
+    recursively collate. This allows each element of the list to be, e.g., its own dict.
+    If vec is a list of dicts (with the same keys in each dict), it returns a single dict
+    with the same keys. For each key, it recursively collates all entries in the list.
+    """
+    if not isinstance(vec, list):
+        raise TypeError("collate_list must take in a list")
+    elem = vec[0]
+    if torch.is_tensor(elem):
+        return torch.cat(vec)
+    elif isinstance(elem, list):
+        return [obj for sublist in vec for obj in sublist]
+    elif isinstance(elem, dict):
+        return {k: collate_list([d[k] for d in vec]) for k in elem}
+    else:
+        raise TypeError("Elements of the list to collate must be tensors or dicts.")
+
+
+def detach_and_clone(obj):
+    if torch.is_tensor(obj):
+        return obj.detach().clone()
+    elif isinstance(obj, dict):
+        return {k: detach_and_clone(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [detach_and_clone(v) for v in obj]
+    elif isinstance(obj, float) or isinstance(obj, int):
+        return obj
+    else:
+        raise TypeError("Invalid type for detach_and_clone")
 
 
 class TrainClassifier:
-    def __init__(self, config_file):
-        self.config_file = config_file
-        self.cfg = load_config_data(self.config_file)
+    def __init__(self, config_data):
+        # self.config_file = config_file
+        # self.cfg = load_config_data(self.config_file)
+        self.cfg = config_data
         results_dir = osp.abspath(osp.expanduser(self.cfg.train_args.results_dir))
         all_logs_dir = os.path.join(results_dir, self.cfg.setting,
                                     self.cfg.dss_args.type,
@@ -67,6 +116,53 @@ class TrainClassifier:
                 loss = criterion(outputs, targets)
                 total_loss += loss.item()
         return total_loss
+
+    def eval_group(self, dataset, y_pred, y_true, metadata, prediction_fn=None):
+        metric = Accuracy(prediction_fn=prediction_fn)
+        results = {
+            **metric.compute(y_pred, y_true),
+        }
+        results_str = f"Average {metric.name}: {results[metric.agg_metric_field]:.3f}\n"
+        # Each eval_grouper is over label + a single identity
+        # We only want to keep the groups where the identity is positive
+        # The groups are:
+        #   Group 0: identity = 0, y = 0
+        #   Group 1: identity = 1, y = 0
+        #   Group 2: identity = 0, y = 1
+        #   Group 3: identity = 1, y = 1
+        # so this means we want only groups 1 and 3.
+        worst_group_metric = None
+        for identity_var, eval_grouper in zip(dataset._identity_vars, dataset._eval_groupers):
+            g = move_to(eval_grouper.metadata_to_group(metadata), self.cfg.train_args.device)
+            group_results = {
+                **metric.compute_group_wise(y_pred, y_true, g, eval_grouper.n_groups)
+            }
+            results_str += f"  {identity_var:20s}"
+            for group_idx in range(eval_grouper.n_groups):
+                group_str = eval_grouper.group_field_str(group_idx)
+                if f'{identity_var}:1' in group_str:
+                    group_metric = group_results[metric.group_metric_field(group_idx)]
+                    group_counts = group_results[metric.group_count_field(group_idx)]
+                    results[f'{metric.name}_{group_str}'] = group_metric
+                    results[f'count_{group_str}'] = group_counts
+                    if f'y:0' in group_str:
+                        label_str = 'non_toxic'
+                    else:
+                        label_str = 'toxic'
+                    results_str += (
+                        f"   {metric.name} on {label_str}: {group_metric:.3f}"
+                        f" (n = {results[f'count_{group_str}']:6.0f}) "
+                    )
+                    if worst_group_metric is None:
+                        worst_group_metric = group_metric
+                    else:
+                        worst_group_metric = metric.worst(
+                            [worst_group_metric, group_metric])
+            results_str += f"\n"
+        results[f'{metric.worst_group_metric_field}'] = worst_group_metric
+        results_str += f"Worst-group {metric.name}: {worst_group_metric:.3f}\n"
+
+        return results, results_str
 
     """
     ############################## Model Creation ##############################
@@ -195,9 +291,18 @@ class TrainClassifier:
         val_acc = list()  # np.zeros(configdata['train_args']['num_epochs'])
         tst_acc = list()  # np.zeros(configdata['train_args']['num_epochs'])
         subtrn_acc = list()  # np.zeros(configdata['train_args']['num_epochs'])
+        group_metric = list()
 
         # Checkpoint file
         checkpoint_dir = osp.abspath(osp.expanduser(self.cfg.ckpt.dir))
+        # if self.cfg.dss_args.type == 'SMI':
+        #     ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+        #                             self.cfg.dss_args.type,
+        #                             self.cfg.dss_args.smi_func_tye,
+        #                             self.cfg.dataset.name,
+        #                             str(self.cfg.dss_args.fraction),
+        #                             str(self.cfg.dss_args.select_every))
+        # else:
         ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
                                 self.cfg.dss_args.type,
                                 self.cfg.dataset.name,
@@ -448,10 +553,53 @@ class TrainClassifier:
                                 _, predicted = outputs.max(1)
                                 tst_total += targets.size(0)
                                 tst_correct += predicted.eq(targets).sum().item()
+
                         tst_losses.append(tst_loss)
 
                     if "tst_acc" in print_args:
                         tst_acc.append(tst_correct / tst_total)
+
+                if ("worst_acc" in print_args):
+                    with torch.no_grad():
+                        val_pred = []
+                        val_true = []
+                        val_metadata = []
+                        tst_pred = []
+                        tst_true = []
+                        tst_metadata = []
+                        for _, (inputs, targets, domains) in enumerate(valloader):
+                            inputs, targets = inputs.to(self.cfg.train_args.device), \
+                                              targets.to(self.cfg.train_args.device)
+                            outputs = model(inputs)
+                            _, predicted = outputs.max(1)
+                            val_pred.append(detach_and_clone(predicted))
+                            val_true.append(detach_and_clone(targets))
+                            val_metadata.append(detach_and_clone(domains))
+
+                        for _, (inputs, targets, domains) in enumerate(testloader):
+                            inputs, targets = inputs.to(self.cfg.train_args.device), \
+                                              targets.to(self.cfg.train_args.device)
+                            outputs = model(inputs)
+                            _, predicted = outputs.max(1)
+                            tst_pred.append(detach_and_clone(predicted))
+                            tst_true.append(detach_and_clone(targets))
+                            tst_metadata.append(detach_and_clone(domains))
+                        val_pred = collate_list(move_to(val_pred, torch.device('cpu')))
+                        val_true = collate_list(move_to(val_true, torch.device('cpu')))
+                        val_metadata = collate_list(move_to(val_metadata, torch.device('cpu')))
+                        tst_pred = collate_list(move_to(tst_pred, torch.device('cpu')))
+                        tst_true = collate_list(move_to(tst_true, torch.device('cpu')))
+                        tst_metadata = collate_list(move_to(tst_metadata, torch.device('cpu')))
+                        if val_pred.is_cuda:
+                            logger.info("val_pred on device: " + str(val_pred.get_device()))
+                        if val_true.is_cuda:
+                            logger.info("val_true on device: " + str(val_true.get_device()))
+                        if val_metadata.is_cuda:
+                            logger.info("val_metadata on device: " + str(val_metadata.get_device()))
+                        results_val, results_str_val = validset.eval(val_pred, val_true, val_metadata)
+                        results_tst, results_str_tst = testset.eval(tst_pred, tst_true, tst_metadata)
+                #                         results_val, results_str_val = self.eval_group(validset, val_pred, val_true, val_metadata)
+                #                         results_tst, results_str_test = self.eval_group(testset, tst_pred, tst_true, tst_metadata)
 
                 if "subtrn_acc" in print_args:
                     subtrn_acc.append(subtrn_correct / subtrn_total)
@@ -491,6 +639,12 @@ class TrainClassifier:
                     if arg == "subtrn_acc":
                         print_str += " , " + "Subset Accuracy: " + str(subtrn_acc[-1])
 
+                    if arg == "worst_acc":
+                        for k, v in results_val.items():
+                            print_str += " , " + str(k) + ": " + str(v)
+                        for k, v in results_tst.items():
+                            print_str += " , " + str(k) + ": " + str(v)
+
                     if arg == "time":
                         print_str += " , " + "Timing: " + str(timing[-1])
 
@@ -499,6 +653,8 @@ class TrainClassifier:
                     tune.report(mean_accuracy=val_acc[-1])
 
                 logger.info(print_str)
+                logger.info(results_str_val)
+                logger.info(results_str_tst)
 
             """
             ################################################# Checkpoint Saving #################################################

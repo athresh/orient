@@ -27,7 +27,7 @@ class SMIStrategy(DataSelectionStrategy):
         self.stopIfZeroGain = stopIfZeroGain
         self.stopIfNegativeGain = stopIfNegativeGain
         # self.query_size = len(valloader.dataset)/len(valloader)
-        self.query_size = int(np.ceil(0.001*len(trainloader.dataset)))
+        self.query_size = int(np.ceil(0.01*len(valloader.dataset)))
         self.verbose = verbose
     
     def compute_gradients(self, valid=False, perBatch=False, perClass=False):
@@ -230,7 +230,7 @@ class SMIStrategy(DataSelectionStrategy):
                                                                 query_sijs=query_sijs,
                                                                 queryDiversityEta=self.eta)
             greedyList = obj.maximize(budget=budget, optimizer=self.optimizer, stopIfZeroGain=self.stopIfZeroGain,
-                                      stopIfNegativeGain=self.stopIfNegativeGain, verbose=self.verbose)
+                                      stopIfNegativeGain=self.stopIfNegativeGain, verbose=False)
             greedyIdxs = [x[0] for x in greedyList]
             gammas = [1]*budget
         smi_end_time = time.time()

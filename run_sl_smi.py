@@ -1,8 +1,10 @@
 from train_sl import TrainClassifier
 import argparse
+from cords.utils.config_utils import load_config_data
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_civilcomments.py")
+    parser.add_argument('--smi_func_type', type=str, default='fl1mi')
     parser.add_argument('--fraction', type=float, default=0.1)
     parser.add_argument('--select_every', type=int, default=2)
     parser.add_argument('--print_every', type=int, default=1)
@@ -10,9 +12,12 @@ if __name__=='__main__':
     parser.add_argument('--device', type=str, default='cuda')
     args = parser.parse_args()
     config_file = args.config_file
-    classifier = TrainClassifier(config_file)
-    classifier.cfg.dss_args.fraction = args.fraction
-    classifier.cfg.dss_args.select_every = args.select_every
-    classifier.cfg.train_args.device = args.device
-    classifier.cfg.train_args.print_every = args.print_every
+    config_data = load_config_data(args.config_file)
+    # classifier = TrainClassifier(config_file)
+    config_data.dss_args.smi_func_type = args.smi_func_type
+    config_data.dss_args.fraction = args.fraction
+    config_data.dss_args.select_every = args.select_every
+    config_data.train_args.device = args.device
+    config_data.train_args.print_every = args.print_every
+    classifier = TrainClassifier(config_data)
     classifier.train()
