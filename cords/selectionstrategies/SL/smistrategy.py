@@ -210,21 +210,28 @@ class SMIStrategy(DataSelectionStrategy):
             # else:
             #     sum_val_grad = torch.sum(trn_gradients, dim=0)
 
-            data_sijs = submodlib.helper.create_kernel(X=trn_gradients.cpu().numpy(), metric=self.metric, method='sklearn')
-            self.logger.info("data_sijs computed")
+
 #             query_sijs = submodlib.helper.create_kernel(X=val_gradients.cpu().numpy(), X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
 #                                                          method='sklearn')
-            query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(), X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
-                                                         method='sklearn')
-            self.logger.info("query_sijs computed")
             
             if self.smi_func_type == 'fl1mi':
+                data_sijs = submodlib.helper.create_kernel(X=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                           method='sklearn')
+                self.logger.info("data_sijs computed")
+                query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                            X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                            method='sklearn')
+                self.logger.info("query_sijs computed")
                 obj = submodlib.FacilityLocationMutualInformationFunction(n=self.N_trn,
                                                                 num_queries=self.query_size,
                                                                 data_sijs=data_sijs,
                                                                 query_sijs=query_sijs,
                                                                 magnificationEta=self.eta)
             if self.smi_func_type == 'fl2mi':
+                query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                            X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                            method='sklearn')
+                self.logger.info("query_sijs computed")
                 obj = submodlib.FacilityLocationVariantMutualInformationFunction(n=self.N_trn,
                                                                 num_queries=self.query_size,
                                                                 query_sijs=query_sijs,
