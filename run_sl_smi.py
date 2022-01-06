@@ -10,6 +10,7 @@ if __name__=='__main__':
     parser.add_argument('--print_every', type=int, default=1)
     parser.add_argument('--save_every', type=int, default=2)
     parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--num_epochs', type=int, default=10)
     args = parser.parse_args()
     config_file = args.config_file
     config_data = load_config_data(args.config_file)
@@ -19,5 +20,6 @@ if __name__=='__main__':
     config_data.dss_args.select_every = args.select_every
     config_data.train_args.device = args.device
     config_data.train_args.print_every = args.print_every
+    config_data.train_args.num_epochs = args.num_epochs
     classifier = TrainClassifier(config_data)
     classifier.train()

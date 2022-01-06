@@ -12,6 +12,7 @@ config = dict(setting="SL",
 
               model=dict(architecture='distilbert',
                          type='pre-defined',
+                         target_resolution=(224, 224),
                          numclasses=2),
 
               ckpt=dict(is_load=False,
@@ -22,10 +23,9 @@ config = dict(setting="SL",
               loss=dict(type='CrossEntropyLoss',
                         use_sigmoid=False),
 
-              optimizer=dict(type="sgd",
-                             momentum=0.9,
-                             lr=0.01,
-                             weight_decay=5e-4),
+              optimizer=dict(type="adamw",
+                             lr=1e-5,
+                             weight_decay=0.01),
 
               scheduler=dict(type="cosine_annealing",
                              T_max=300),
