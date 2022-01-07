@@ -31,6 +31,7 @@ from .resnet import ResNet34
 from .resnet import ResNet50
 from .resnet import ResNet101
 from .resnet import ResNet152
+from .resnet import ResNetPretrained
 from .senet import SENet18
 from .shufflenet import ShuffleNetG2
 from .shufflenet import ShuffleNetG3

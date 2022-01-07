@@ -20,6 +20,7 @@ from wilds.common.data_loaders import get_train_loader, get_eval_loader
 from wilds.common.metrics.all_metrics import Accuracy
 
 
+
 def move_to(obj, device):
     if isinstance(obj, dict):
         return {k: move_to(v, device) for k, v in obj.items()}
@@ -175,6 +176,11 @@ class TrainClassifier:
             model = MnistNet()
         elif self.cfg.model.architecture == 'ResNet164':
             model = ResNet164(self.cfg.model.numclasses)
+        elif self.cfg.model.architecture == 'ResNet50':
+            if self.cfg.model.pretrained:
+                model = ResNetPretrained('ResNet50', class_num=self.cfg.model.numclasses)
+            else:
+                model = ResNet50(self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'MobileNet':
             model = MobileNet(self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'MobileNetV2':
@@ -254,6 +260,12 @@ class TrainClassifier:
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
                                                                classimb_ratio=self.cfg.dataset.classimb_ratio)
+        elif self.cfg.dataset.name == "office31":
+            trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
+                                                               self.cfg.dataset.name,
+                                                               self.cfg.dataset.feature,
+                                                               imagelist_params = self.cfg.dataset.customImageListParams,
+                                                               preprocess_params = self.cfg.dataset.preprocess)
         else:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
@@ -280,6 +292,7 @@ class TrainClassifier:
 
             testloader = torch.utils.data.DataLoader(testset, batch_size=tst_batch_size,
                                                      shuffle=False, pin_memory=True)
+
 
         substrn_losses = list()  # np.zeros(configdata['train_args']['num_epochs'])
         trn_losses = list()
@@ -483,6 +496,7 @@ class TrainClassifier:
             # if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
             #     plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
             #     plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
+                # HK: For unsupervised add psuedo labels to valdataloader.
             epoch_time = time.time() - start_time
             scheduler.step()
             timing.append(epoch_time)
@@ -653,8 +667,9 @@ class TrainClassifier:
                     tune.report(mean_accuracy=val_acc[-1])
 
                 logger.info(print_str)
-                logger.info(results_str_val)
-                logger.info(results_str_tst)
+                if ("worst_acc" in print_args):
+                    logger.info(results_str_val)
+                    logger.info(results_str_tst)
 
             """
             ################################################# Checkpoint Saving #################################################

@@ -15,7 +15,6 @@ import re
 import pandas as pd
 import torch
 import torchtext.data
-from wilds import get_dataset
 from wilds.common.data_loaders import get_train_loader
 import torchvision.transforms as transforms
 from transformers import BertTokenizerFast, DistilBertTokenizerFast
@@ -37,6 +36,83 @@ def loadGloveModel(gloveFile):
     glove = pd.read_csv(gloveFile, sep=' ', header=None, encoding='utf-8', index_col=0, na_values=None, keep_default_na=False, quoting=3)
     return glove  # (word, embedding), 400k*dim
 
+
+class CustomImageList(Dataset):
+    """
+    Code adapted from https://github.com/thuml/OpenDG-DAML
+
+    A custom Dataset class for domain adaptation in image classification
+    Parameters:
+        - **root** (str): Root directory of dataset
+        - **domains** (list of str): List of domains to be read
+        - **num_classes** (int): Number of classes
+        - **data_list_folder** (str): Directory containing the domain.txt files.
+        - **transform** (callable, optional): A function/transform that  takes in an PIL image \
+            and returns a transformed version. E.g, ``transforms.RandomCrop``.
+        - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
+        - **split** (str): split label, default None
+    .. note:: `data_list_folder` is expected to have files with <domain>.txt or <domain>_<split>.txt.
+         Each file line contains 2 values in the following format.
+        ::
+            path/dog_xxx.png 0
+            path/cat_123.png 1
+            path/dog_xxy.png 0
+            path/cat_nsdf3.png 1
+        The first value is the relative path from [root]/[domain]/images/, and the second value is the label of the corresponding image.
+    """
+
+    def __init__(self, root, domains, num_classes, data_list_folder, transform=None, target_transform=None, split=None):
+        self.root = root
+        self.transform = transform
+        self.target_transform = target_transform
+        # super().__init__(root, transform=transform, target_transform=target_transform)
+        self._num_classes = num_classes
+        self.data_list = self.parse_data_file(data_list_folder, domains, split)
+        self.loader = torchvision.datasets.folder.default_loader
+
+
+    def __getitem__(self, index):
+        """
+        Parameters:
+            - **index** (int): Index
+            - **return** (tuple): (image, target) where target is index of the target class.
+        """
+        path, target, domain = self.data_list[index]
+        img = self.loader(path)
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.target_transform is not None and target is not None:
+            target = self.target_transform(target)
+        return img, target, index
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def parse_data_file(self, data_list_folder, domains, split=None):
+        """Parse file to data list
+        Parameters:
+            - **data_list_folder** (str): The dir containing the data file
+            - **domains** (list of str): List of domains to be read
+            - *split* (str) : Name of the split, default: None
+            - **return** (list): List of (image path, class_index, domain) tuples
+        """
+        data_list = []
+        for domain in domains:
+            file_name =  f"{data_list_folder}/{domain}"
+            if split is not None:
+                file_name = f"{file_name}_{split}"
+            with open(file_name+".txt", "r") as f:
+                for line in f.readlines():
+                    path, target = line.split()
+                    if not os.path.isabs(path):
+                        path = os.path.join(self.root, domain+"/images/"+path)
+                    data_list.append((path, int(target), domain))
+        return data_list
+
+    @property
+    def num_classes(self):
+        """Number of classes"""
+        return self._num_classes
 
 class SSTDataset(Dataset):
     label_tmp = None
@@ -234,6 +310,17 @@ def libsvm_file_load(path, dim, save_data=False):
         np.save(data_np_path, X_data)
         np.save(target_np_path, Y_label)
     return (X_data, Y_label)
+
+class ResizeImage:
+    def __init__(self, size):
+        if isinstance(size, int):
+            self.size = (int(size), int(size))
+        else:
+            self.size = size
+
+    def __call__(self, img):
+        th, tw = self.size
+        return img.resize((th, tw))
 
 
 def census_load(path, dim, save_data=False):
@@ -1461,6 +1548,8 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
         return fullset, valset, testset, num_cls
 
     elif dset_name == 'civilcomments':
+        from wilds import get_dataset
+
         full_dataset = get_dataset(dataset='civilcomments', root_dir=datadir, download=True, split_scheme='official')
         transform = initialize_bert_transform(model='distilbert-base-uncased', max_token_length=270)
         for split in full_dataset.split_dict.keys():
@@ -1472,3 +1561,34 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                 testset = full_dataset.get_subset(split, transform=transform)
 
         return trainset, valset, testset, full_dataset.n_classes
+
+    elif dset_name == 'office31':
+        preprocess_params = kwargs['preprocess_params']
+        normalize = transforms.Normalize(mean=preprocess_params['normalizer_mean'], std=preprocess_params['normalizer_std'])
+        transform = transforms.Compose([
+            ResizeImage(preprocess_params['resize']),
+            transforms.RandomResizedCrop(preprocess_params['crop']),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        imagelist_params = kwargs['imagelist_params']
+        trainset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['source_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform)
+
+        valset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['target_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform,
+                                   split='val')
+        testset = CustomImageList(datadir,
+                                  num_classes=imagelist_params['num_classes'],
+                                  domains=imagelist_params['target_domains'],
+                                  data_list_folder=imagelist_params['image_list_folder'],
+                                  transform=transform,
+                                  split='test')
+        return trainset, valset, testset, imagelist_params['num_classes']
