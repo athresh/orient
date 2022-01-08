@@ -11,7 +11,7 @@ import submodlib
 class SMIStrategy(DataSelectionStrategy):
     def __init__(self, trainloader, valloader, model, loss,
                  device, num_classes, linear_layer,
-                 selection_type, logger, smi_func_type, valid=True, optimizer='NaiveGreedy', metric='cosine', eta=1,
+                 selection_type, logger, smi_func_type, query_size, valid=True, optimizer='NaiveGreedy', metric='cosine', eta=1,
                  stopIfZeroGain=False, stopIfNegativeGain=False, verbose=False):
         """
         Constructer method
@@ -27,7 +27,8 @@ class SMIStrategy(DataSelectionStrategy):
         self.stopIfZeroGain = stopIfZeroGain
         self.stopIfNegativeGain = stopIfNegativeGain
         # self.query_size = len(valloader.dataset)/len(valloader)
-        self.query_size = int(np.ceil(0.01*len(valloader.dataset)))
+        # self.query_size = int(np.ceil(0.01*len(valloader.dataset)))
+        self.query_size = query_size
         self.verbose = verbose
     
     def compute_gradients(self, valid=False, perBatch=False, perClass=False):
@@ -217,11 +218,9 @@ class SMIStrategy(DataSelectionStrategy):
             if self.smi_func_type == 'fl1mi':
                 data_sijs = submodlib.helper.create_kernel(X=trn_gradients.cpu().numpy(), metric=self.metric,
                                                            method='sklearn')
-                self.logger.info("data_sijs computed")
                 query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
                                                             X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
                                                             method='sklearn')
-                self.logger.info("query_sijs computed")
                 obj = submodlib.FacilityLocationMutualInformationFunction(n=self.N_trn,
                                                                 num_queries=self.query_size,
                                                                 data_sijs=data_sijs,
@@ -231,7 +230,6 @@ class SMIStrategy(DataSelectionStrategy):
                 query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
                                                             X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
                                                             method='sklearn')
-                self.logger.info("query_sijs computed")
                 obj = submodlib.FacilityLocationVariantMutualInformationFunction(n=self.N_trn,
                                                                 num_queries=self.query_size,
                                                                 query_sijs=query_sijs,

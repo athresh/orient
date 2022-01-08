@@ -18,7 +18,9 @@ class SMIDataLoader(AdaptiveDSSDataLoader):
         assert "num_classes" in dss_args.keys(), "'num_classes' is a compulsory argument for SMI. Include it as a key in dss_args"
         assert "linear_layer" in dss_args.keys(), "'linear_layer' is a compulsory argument for SMI. Include it as a key in dss_args"
         assert "selection_type" in dss_args.keys(), "'selection_type' is a compulsory argument for SMI. Include it as a key in dss_args"
+        assert "query_size" in dss_args.keys(), "'query_size' is a compulsory argument for SMI. Include it as a key in dss_args"
         assert "valid" in dss_args.keys(), "'valid' is a compulsory argument for SMI. Include it as a key in dss_args"
+        assert dss_args.query_size <= len(val_loader.dataset), "'query_size' ({}) must be less than or equal to the validation set size ({})".format(dss_args.query_size, len(val_loader.dataset))
 
         super(SMIDataLoader, self).__init__(train_loader, val_loader, dss_args,
                                                   logger, *args, **kwargs)
@@ -27,6 +29,7 @@ class SMIDataLoader(AdaptiveDSSDataLoader):
                                     dss_args.selection_type,
                                     logger,
                                     dss_args.smi_func_type,
+                                    dss_args.query_size,
                                     dss_args.valid,
                                     dss_args.optimizer,
                                     dss_args.metric,
