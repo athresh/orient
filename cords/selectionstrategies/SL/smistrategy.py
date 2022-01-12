@@ -234,6 +234,28 @@ class SMIStrategy(DataSelectionStrategy):
                                                                 num_queries=self.query_size,
                                                                 query_sijs=query_sijs,
                                                                 queryDiversityEta=self.eta)
+            if self.smi_func_type == 'logdetmi':
+                data_sijs = submodlib.helper.create_kernel(X=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                           method='sklearn')
+                query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                            X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                            method='sklearn')
+                query_query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(), metric=self.metric,
+                                                                  method='sklearn')
+                obj = submodlib.LogDeterminantMutualInformationFunction(n=self.N_trn,
+                                                                        num_queries=self.query_size,
+                                                                        data_sijs=data_sijs,
+                                                                        query_sijs=query_sijs,
+                                                                        query_query_sijs=query_query_sijs,
+                                                                        magnificationEra=self.eta
+                                                                        )
+            if self.smi_func_type == 'gcmi':
+                query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                            X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                            method='sklearn')
+                obj = submodlib.GraphCutMutualInformationFunction(n=self.N_trn,
+                                                                  num_queries=self.query_size,
+                                                                  query_sijs=query_sijs)
             greedyList = obj.maximize(budget=budget, optimizer=self.optimizer, stopIfZeroGain=self.stopIfZeroGain,
                                       stopIfNegativeGain=self.stopIfNegativeGain, verbose=False)
             greedyIdxs = [x[0] for x in greedyList]
