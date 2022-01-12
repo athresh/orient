@@ -247,7 +247,7 @@ class SMIStrategy(DataSelectionStrategy):
                                                                         data_sijs=data_sijs,
                                                                         query_sijs=query_sijs,
                                                                         query_query_sijs=query_query_sijs,
-                                                                        magnificationEra=self.eta
+                                                                        magnificationEta=self.eta
                                                                         )
             if self.smi_func_type == 'gcmi':
                 query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
