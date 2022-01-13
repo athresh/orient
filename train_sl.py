@@ -194,6 +194,8 @@ class TrainClassifier:
         elif self.cfg.model.architecture == 'distilbert':
             model = DistilBertClassifier.from_pretrained('distilbert-base-uncased',
                                                          num_labels=self.cfg.model.numclasses)
+        elif self.cfg.model.architecture == 'TwoLayerNet':
+            model = TwoLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,hidden_units=self.cfg.model.hidden_units)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -266,6 +268,11 @@ class TrainClassifier:
                                                                self.cfg.dataset.feature,
                                                                imagelist_params = self.cfg.dataset.customImageListParams,
                                                                preprocess_params = self.cfg.dataset.preprocess)
+        elif self.cfg.dataset.name == "toy_da":
+            trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
+                                                               self.cfg.dataset.name,
+                                                               self.cfg.dataset.feature,
+                                                               daParams=self.cfg.dataset.daParams)
         else:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
@@ -473,8 +480,8 @@ class TrainClassifier:
             subtrn_total = 0
             model.train()
             start_time = time.time()
-            # if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-            #     plt.figure()
+            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+                plt.figure()
             for _, (inputs, targets, domains, weights) in enumerate(dataloader):
                 #             for _, (inputs, targets, weights) in enumerate(dataloader):
                 inputs = inputs.to(self.cfg.train_args.device)
@@ -490,12 +497,12 @@ class TrainClassifier:
                 _, predicted = outputs.max(1)
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
-            #     if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-            #         plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c='red',
-            #                     s=25, edgecolor='k')
-            # if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-            #     plt.title("Strategy: {}, Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.fraction))
-            #     plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
+                if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c=targets.cpu().numpy(),
+                                s=25, edgecolor='k')
+            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+                plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
+                plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
                 # HK: For unsupervised add psuedo labels to valdataloader.
             epoch_time = time.time() - start_time
             scheduler.step()

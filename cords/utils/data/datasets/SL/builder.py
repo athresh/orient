@@ -1592,3 +1592,26 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                                   transform=transform,
                                   split='test')
         return trainset, valset, testset, imagelist_params['num_classes']
+        return trainset, valset, testset, imagelist_params['num_classes']
+    elif dset_name == 'toy_da':
+        np.random.seed(42)
+        daParams = kwargs['daParams']
+        trn_file = os.path.join(datadir, daParams['source_domains'][0],daParams['source_domains'][0] + '.trn')
+        val_file = os.path.join(datadir, daParams['target_domains'][0],daParams['target_domains'][0] + '.val')
+        tst_file = os.path.join(datadir, daParams['target_domains'][0],daParams['target_domains'][0] + '.tst')
+        data_dims = 2
+        num_cls = 2
+        x_trn, y_trn = csv_file_load(trn_file, dim=data_dims)
+        x_val, y_val = csv_file_load(val_file, dim=data_dims)
+        x_tst, y_tst = csv_file_load(tst_file, dim=data_dims)
+
+        if isnumpy:
+            fullset = (x_trn, y_trn)
+            valset = (x_val, y_val)
+            testset = (x_tst, y_tst)
+
+        else:
+            fullset = CustomDataset(torch.from_numpy(x_trn), torch.from_numpy(y_trn))
+            valset = CustomDataset(torch.from_numpy(x_val), torch.from_numpy(y_val))
+            testset = CustomDataset(torch.from_numpy(x_tst), torch.from_numpy(y_tst))
+        return fullset, valset, testset, num_cls

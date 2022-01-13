@@ -12,7 +12,7 @@ class SMIStrategy(DataSelectionStrategy):
     def __init__(self, trainloader, valloader, model, loss,
                  device, num_classes, linear_layer,
                  selection_type, logger, smi_func_type, query_size, valid=True, optimizer='NaiveGreedy', metric='cosine', eta=1,
-                 stopIfZeroGain=False, stopIfNegativeGain=False, verbose=False):
+                 stopIfZeroGain=False, stopIfNegativeGain=False, verbose=False, lambdaVal=1):
         """
         Constructer method
         """
@@ -30,6 +30,7 @@ class SMIStrategy(DataSelectionStrategy):
         # self.query_size = int(np.ceil(0.01*len(valloader.dataset)))
         self.query_size = query_size
         self.verbose = verbose
+        self.lambdaVal = lambdaVal
     
     def compute_gradients(self, valid=False, perBatch=False, perClass=False):
         """
@@ -245,7 +246,7 @@ class SMIStrategy(DataSelectionStrategy):
                 obj = submodlib.LogDeterminantMutualInformationFunction(n=self.N_trn,
                                                                         num_queries=self.query_size,
                                                                         data_sijs=data_sijs,
-                                                                        lambdaVal=1,
+                                                                        lambdaVal=self.lambdaVal,
                                                                         query_sijs=query_sijs,
                                                                         query_query_sijs=query_query_sijs,
                                                                         magnificationEta=self.eta
