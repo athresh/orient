@@ -123,8 +123,11 @@ class CRAIGStrategy(DataSelectionStrategy):
         g_is = []
 
         if self.if_convex:
-            for batch_idx, (inputs, targets) in enumerate(subset_loader):
-                inputs, targets = inputs, targets
+            for batch_idx, batch in enumerate(subset_loader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
                 if self.selection_type == 'PerBatch':
                     self.N += 1
                     g_is.append(inputs.view(inputs.size()[0], -1).mean(dim=0).view(1, -1))
@@ -133,7 +136,11 @@ class CRAIGStrategy(DataSelectionStrategy):
                     g_is.append(inputs.view(inputs.size()[0], -1))
         else:
             embDim = self.model.get_embedding_dim()
-            for batch_idx, (inputs, targets) in enumerate(subset_loader):
+            for batch_idx, batch in enumerate(subset_loader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
                 inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
                 if self.selection_type == 'PerBatch':
                     self.N += 1
@@ -209,7 +216,11 @@ class CRAIGStrategy(DataSelectionStrategy):
         kernel: ndarray
             Array of kernel values
         """
-        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
+        for batch_idx, batch in enumerate(self.trainloader):
+            if len(batch) == 2:
+                inputs, targets = batch
+            elif len(batch) == 3:
+                inputs, targets, domain = batch
             if batch_idx == 0:
                 labels = targets
             else:
@@ -247,7 +258,11 @@ class CRAIGStrategy(DataSelectionStrategy):
             List containing gradients of datapoints present in greedySet
         """
         start_time = time.time()
-        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
+        for batch_idx, batch in enumerate(self.trainloader):
+            if len(batch) == 2:
+                inputs, targets = batch
+            elif len(batch) == 3:
+                inputs, targets, domain = batch
             if batch_idx == 0:
                 labels = targets
             else:
