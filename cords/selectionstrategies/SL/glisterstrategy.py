@@ -120,7 +120,11 @@ class GLISTERStrategy(DataSelectionStrategy):
             valloader = self.valloader
         
         if first_init:
-            for batch_idx, (inputs, targets) in enumerate(valloader):
+            for batch_idx, batch in enumerate(valloader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
                 inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
                 if batch_idx == 0:
                     out, l1 = self.model(inputs, last=True, freeze=True)
