@@ -16,8 +16,7 @@ from cords.utils.data.dataloader.SL.adaptive import GLISTERDataLoader, OLRandomD
 from cords.utils.data.datasets.SL import gen_dataset
 from cords.utils.models import *
 import matplotlib.pyplot as plt
-from wilds.common.data_loaders import get_train_loader, get_eval_loader
-from wilds.common.metrics.all_metrics import Accuracy
+
 
 
 
@@ -101,7 +100,7 @@ class TrainClassifier:
         f_handler.setLevel(logging.DEBUG)
         self.logger.addHandler(f_handler)
         self.logger.propagate = False
-        self.logger.info(self.cfg)
+        self.logger.info(self.cfg.pprint())
 
     """
     ############################## Loss Evaluation ##############################
@@ -119,6 +118,7 @@ class TrainClassifier:
         return total_loss
 
     def eval_group(self, dataset, y_pred, y_true, metadata, prediction_fn=None):
+        from wilds.common.metrics.all_metrics import Accuracy
         metric = Accuracy(prediction_fn=prediction_fn)
         results = {
             **metric.compute(y_pred, y_true),
@@ -284,6 +284,7 @@ class TrainClassifier:
 
         # Creating the Data Loaders
         if self.cfg.dataset.name in ['civilcomments']:
+            from wilds.common.data_loaders import get_train_loader, get_eval_loader
             trainloader = get_train_loader(loader='standard', dataset=trainset, batch_size=trn_batch_size,
                                            pin_memory=True)
             valloader = get_eval_loader(loader='standard', dataset=validset, batch_size=val_batch_size,

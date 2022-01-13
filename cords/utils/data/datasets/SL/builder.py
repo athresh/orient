@@ -15,7 +15,6 @@ import re
 import pandas as pd
 import torch
 import torchtext.data
-from wilds.common.data_loaders import get_train_loader
 import torchvision.transforms as transforms
 from transformers import BertTokenizerFast, DistilBertTokenizerFast
 
@@ -83,7 +82,7 @@ class CustomImageList(Dataset):
             img = self.transform(img)
         if self.target_transform is not None and target is not None:
             target = self.target_transform(target)
-        return img, target, index
+        return img, target, domain
 
     def __len__(self):
         return len(self.data_list)
@@ -1549,7 +1548,7 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
 
     elif dset_name == 'civilcomments':
         from wilds import get_dataset
-
+        from wilds.common.data_loaders import get_train_loader
         full_dataset = get_dataset(dataset='civilcomments', root_dir=datadir, download=True, split_scheme='official')
         transform = initialize_bert_transform(model='distilbert-base-uncased', max_token_length=270)
         for split in full_dataset.split_dict.keys():

@@ -50,7 +50,11 @@ class DataSelectionStrategy(object):
         pass
 
     def get_labels(self, valid=False):
-        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
+        for batch_idx, batch in enumerate(self.trainloader):
+            if len(batch) == 2:
+                inputs, targets = batch
+            elif len(batch) == 3:
+                inputs, targets, domain = batch
             if batch_idx == 0:
                 self.trn_lbls = targets.view(-1, 1)
             else:
@@ -58,7 +62,11 @@ class DataSelectionStrategy(object):
         self.trn_lbls = self.trn_lbls.view(-1)
 
         if valid:
-            for batch_idx, (inputs, targets) in enumerate(self.valloader):
+            for batch_idx, batch in enumerate(self.valloader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
                 if batch_idx == 0:
                     self.val_lbls = targets.view(-1, 1)
                 else:
@@ -114,7 +122,11 @@ class DataSelectionStrategy(object):
             if valid:
                 valloader = self.valloader
             
-        for batch_idx, (inputs, targets) in enumerate(trainloader):
+        for batch_idx, batch in enumerate(trainloader):
+            if len(batch) == 2:
+                inputs, targets = batch
+            elif len(batch) == 3:
+                inputs, targets, domain = batch
             inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
             if batch_idx == 0:
                 out, l1 = self.model(inputs, last=True, freeze=True)
@@ -151,7 +163,11 @@ class DataSelectionStrategy(object):
             self.grads_per_elem = l0_grads
 
         if valid:
-            for batch_idx, (inputs, targets) in enumerate(valloader):
+            for batch_idx, batch in enumerate(valloader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
                 inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
                 if batch_idx == 0:
                     out, l1 = self.model(inputs, last=True, freeze=True)

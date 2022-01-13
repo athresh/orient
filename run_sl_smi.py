@@ -9,13 +9,14 @@ if __name__=='__main__':
     parser.add_argument('--fraction', type=float, default=0.1)
     parser.add_argument('--select_every', type=int, default=2)
     parser.add_argument('--print_every', type=int, default=1)
-    parser.add_argument('--save_every', type=int, default=2)
+    parser.add_argument('--save_every', type=int, default=1)
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--num_epochs', type=int, default=10)
     args = parser.parse_args()
     config_file = args.config_file
     config_data = load_config_data(args.config_file)
     # classifier = TrainClassifier(config_file)
+    config_data.config_file = config_file
     config_data.dss_args.smi_func_type = args.smi_func_type
     config_data.dss_args.fraction = args.fraction
     config_data.dss_args.select_every = args.select_every
