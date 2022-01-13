@@ -3,8 +3,9 @@ import argparse
 from cords.utils.config_utils import load_config_data
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_civilcomments.py")
-    parser.add_argument('--smi_func_type', type=str, default='fl1mi')
+    parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_toy_da.py")
+    parser.add_argument('--smi_func_type', type=str, default='fl2mi')
+    parser.add_argument('--query_size', type=int, default=100)
     parser.add_argument('--fraction', type=float, default=0.1)
     parser.add_argument('--select_every', type=int, default=2)
     parser.add_argument('--print_every', type=int, default=1)
