@@ -1,4 +1,3 @@
-@@ -0,0 +1,64 @@
 # Learning setting
 
 config = dict(setting="SL",
