@@ -245,6 +245,7 @@ class SMIStrategy(DataSelectionStrategy):
                 obj = submodlib.LogDeterminantMutualInformationFunction(n=self.N_trn,
                                                                         num_queries=self.query_size,
                                                                         data_sijs=data_sijs,
+                                                                        lambdaVal=1,
                                                                         query_sijs=query_sijs,
                                                                         query_query_sijs=query_query_sijs,
                                                                         magnificationEta=self.eta
