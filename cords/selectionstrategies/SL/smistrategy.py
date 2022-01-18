@@ -80,8 +80,15 @@ class SMIStrategy(DataSelectionStrategy):
             trainloader = self.trainloader
             if valid:
                 valloader = self.valloader
-        for batch_idx, (inputs, targets, domains) in enumerate(trainloader):
+        # for batch_idx, (inputs, targets, domains) in enumerate(trainloader):
         # for batch_idx, (inputs, targets) in enumerate(trainloader):
+        for batch_idx, batch in enumerate(trainloader):
+            if len(batch) == 2:
+                inputs, targets = batch
+            elif len(batch) == 3:
+                inputs, targets, domain = batch
+            else:
+                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
             inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
             if batch_idx == 0:
                 out, l1 = self.model(inputs, last=True, freeze=True)
@@ -118,8 +125,15 @@ class SMIStrategy(DataSelectionStrategy):
             self.grads_per_elem = l0_grads
 
         if valid:
-            for batch_idx, (inputs, targets, domains) in enumerate(valloader):
+            # for batch_idx, (inputs, targets, domains) in enumerate(valloader):
             # for batch_idx, (inputs, targets) in enumerate(valloader):
+            for batch_idx, batch in enumerate(valloader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domain = batch
+                else:
+                    raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                 inputs, targets = inputs.to(self.device), targets.to(self.device, non_blocking=True)
                 if batch_idx == 0:
                     out, l1 = self.model(inputs, last=True, freeze=True)

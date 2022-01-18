@@ -17,6 +17,7 @@ import torch
 import torchtext.data
 import torchvision.transforms as transforms
 from transformers import BertTokenizerFast, DistilBertTokenizerFast
+from random import shuffle
 
 
 def clean_data(sentence):
@@ -60,15 +61,15 @@ class CustomImageList(Dataset):
         The first value is the relative path from [root]/[domain]/images/, and the second value is the label of the corresponding image.
     """
 
-    def __init__(self, root, domains, num_classes, data_list_folder, transform=None, target_transform=None, split=None):
+    def __init__(self, root, domains, num_classes, data_list_folder, transform=None, target_transform=None, split=None, shuffle=False):
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
+        self.shuffle = shuffle
         # super().__init__(root, transform=transform, target_transform=target_transform)
         self._num_classes = num_classes
         self.data_list = self.parse_data_file(data_list_folder, domains, split)
         self.loader = torchvision.datasets.folder.default_loader
-
 
     def __getitem__(self, index):
         """
@@ -106,6 +107,8 @@ class CustomImageList(Dataset):
                     if not os.path.isabs(path):
                         path = os.path.join(self.root, domain+"/images/"+path)
                     data_list.append((path, int(target), domain))
+        if self.shuffle:
+            np.random.shuffle(data_list)
         return data_list
 
     @property
@@ -312,6 +315,7 @@ def libsvm_file_load(path, dim, save_data=False):
 
 class ResizeImage:
     def __init__(self, size):
+        # print("In builder: size = {}".format(size))
         if isinstance(size, int):
             self.size = (int(size), int(size))
         else:
@@ -319,6 +323,7 @@ class ResizeImage:
 
     def __call__(self, img):
         th, tw = self.size
+        # print("{},{}".format(th,tw))
         return img.resize((th, tw))
 
 
@@ -1591,6 +1596,37 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                                   transform=transform,
                                   split='test')
         return trainset, valset, testset, imagelist_params['num_classes']
+        return trainset, valset, testset, imagelist_params['num_classes']
+    elif dset_name == 'domainnet':
+        np.random.seed(42)
+        preprocess_params = kwargs['preprocess_params']
+        normalize = transforms.Normalize(mean=preprocess_params['normalizer_mean'], std=preprocess_params['normalizer_std'])
+        transform = transforms.Compose([
+            ResizeImage(preprocess_params['resize']),
+            transforms.RandomResizedCrop([preprocess_params['crop'], preprocess_params['crop']]),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        imagelist_params = kwargs['imagelist_params']
+        trainset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['source_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform)
+
+        valset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['target_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform,
+                                   split='test', shuffle=True)
+        testset = CustomImageList(datadir,
+                                  num_classes=imagelist_params['num_classes'],
+                                  domains=imagelist_params['target_domains'],
+                                  data_list_folder=imagelist_params['image_list_folder'],
+                                  transform=transform,
+                                  split='test', shuffle=True)
         return trainset, valset, testset, imagelist_params['num_classes']
     elif dset_name == 'toy_da':
         np.random.seed(42)
