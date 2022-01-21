@@ -216,7 +216,7 @@ class SMIStrategy(DataSelectionStrategy):
         #     fl = FacilityLocationMutualInformationFunction()
         smi_start_time = time.time()
         if self.selection_type == 'Supervised':
-            if self.similiarity_criterion == "gradient":
+            if self.similarity_criterion == "gradient":
                 self.compute_gradients(self.valid)
                 trn_gradients = self.grads_per_elem
                 query_gradients = self.query_grads_per_elem
