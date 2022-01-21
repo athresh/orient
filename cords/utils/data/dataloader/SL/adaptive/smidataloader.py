@@ -32,6 +32,7 @@ class SMIDataLoader(AdaptiveDSSDataLoader):
                                     dss_args.query_size,
                                     dss_args.valid,
                                     dss_args.optimizer,
+                                    dss_args.similarity_criterion,
                                     dss_args.metric,
                                     dss_args.eta,
                                     dss_args.stopIfZeroGain,

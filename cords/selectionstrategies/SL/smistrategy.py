@@ -11,8 +11,8 @@ import submodlib
 class SMIStrategy(DataSelectionStrategy):
     def __init__(self, trainloader, valloader, model, loss,
                  device, num_classes, linear_layer,
-                 selection_type, logger, smi_func_type, query_size, valid=True, optimizer='NaiveGreedy', metric='cosine', eta=1,
-                 stopIfZeroGain=False, stopIfNegativeGain=False, verbose=False, lambdaVal=1, similarity_criterion='gradient'):
+                 selection_type, logger, smi_func_type, query_size, valid=True, optimizer='NaiveGreedy', similarity_criterion='gradient', metric='cosine', eta=1,
+                 stopIfZeroGain=False, stopIfNegativeGain=False, verbose=False, lambdaVal=1):
         """
         Constructer method
         """
@@ -232,8 +232,6 @@ class SMIStrategy(DataSelectionStrategy):
                     query_query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
                                                                       metric=self.metric,
                                                                       method='sklearn')
-            elif self.similarity_criterion == "feature":
-
             
             if self.smi_func_type == 'fl1mi':
                 obj = submodlib.FacilityLocationMutualInformationFunction(n=self.N_trn,
