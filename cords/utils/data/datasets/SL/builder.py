@@ -1597,6 +1597,36 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                                   split='test')
         return trainset, valset, testset, imagelist_params['num_classes']
         return trainset, valset, testset, imagelist_params['num_classes']
+    elif dset_name == 'officehome':
+        preprocess_params = kwargs['preprocess_params']
+        normalize = transforms.Normalize(mean=preprocess_params['normalizer_mean'], std=preprocess_params['normalizer_std'])
+        transform = transforms.Compose([
+            ResizeImage(preprocess_params['resize']),
+            transforms.RandomResizedCrop(preprocess_params['crop']),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        imagelist_params = kwargs['imagelist_params']
+        trainset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['source_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform)
+
+        valset = CustomImageList(datadir,
+                                   num_classes=imagelist_params['num_classes'],
+                                   domains=imagelist_params['target_domains'],
+                                   data_list_folder=imagelist_params['image_list_folder'],
+                                   transform=transform,
+                                   split='val')
+        testset = CustomImageList(datadir,
+                                  num_classes=imagelist_params['num_classes'],
+                                  domains=imagelist_params['target_domains'],
+                                  data_list_folder=imagelist_params['image_list_folder'],
+                                  transform=transform,
+                                  split='test')
+        return trainset, valset, testset, imagelist_params['num_classes']
     elif dset_name == 'domainnet':
         np.random.seed(42)
         preprocess_params = kwargs['preprocess_params']

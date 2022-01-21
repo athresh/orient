@@ -270,7 +270,7 @@ class TrainClassifier:
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
                                                                classimb_ratio=self.cfg.dataset.classimb_ratio)
-        elif self.cfg.dataset.name in ["office31", "domainnet"]:
+        elif self.cfg.dataset.name in ["office31", "domainnet", "officehome"]:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,

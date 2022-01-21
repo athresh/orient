@@ -26,10 +26,10 @@ if __name__=='__main__':
     config_data.train_args.device = args.device
     config_data.train_args.print_every = args.print_every
     config_data.train_args.num_epochs = args.num_epochs
-    if config_data.dataset.name in ["domainnet", "toy_da", "office31"]:
+    if config_data.dataset.name in ["domainnet", "toy_da", "office31", "officehome"]:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")
-        if config_data.dataset.name in ["domainnet", "office31"]:
+        if config_data.dataset.name in ["domainnet", "office31", "officehome"]:
             config_data.dataset.customImageListParams.source_domains = source_domains
             config_data.dataset.customImageListParams.target_domains = target_domains
         else:
