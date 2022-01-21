@@ -72,15 +72,22 @@ class TrainClassifier:
         # self.config_file = config_file
         # self.cfg = load_config_data(self.config_file)
         self.cfg = config_data
+        if self.cfg.dataset.name == "toy_da":
+            self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(self.cfg.dataset.daParams.target_domains)
+        else:
+            self.da_dir_extension = str(self.cfg.dataset.customImageListParams.source_domains) + '->' + str(
+                self.cfg.dataset.customImageListParams.target_domains)
         results_dir = osp.abspath(osp.expanduser(self.cfg.train_args.results_dir))
         all_logs_dir = os.path.join(results_dir, self.cfg.setting,
                                     self.cfg.dss_args.type,
                                     self.cfg.dataset.name,
+                                    self.da_dir_extension,
                                     str(self.cfg.dss_args.fraction),
                                     str(self.cfg.dss_args.select_every))
         self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
                                           self.cfg.dss_args.type,
                                           self.cfg.dataset.name,
+                                          self.da_dir_extension,
                                           str(self.cfg.dss_args.fraction),
                                           str(self.cfg.dss_args.select_every))
         os.makedirs(all_logs_dir, exist_ok=True)
@@ -335,6 +342,7 @@ class TrainClassifier:
         ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
                                 self.cfg.dss_args.type,
                                 self.cfg.dataset.name,
+                                self.da_dir_extension,
                                 str(self.cfg.dss_args.fraction),
                                 str(self.cfg.dss_args.select_every))
         checkpoint_path = os.path.join(ckpt_dir, 'model.pt')
