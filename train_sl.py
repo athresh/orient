@@ -109,7 +109,13 @@ class TrainClassifier:
     def model_eval_loss(self, data_loader, model, criterion):
         total_loss = 0
         with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(data_loader):
+            for batch_idx, batch in enumerate(data_loader):
+                if len(batch) == 2:
+                    inputs, targets = batch
+                elif len(batch) == 3:
+                    inputs, targets, domains = batch
+                else:
+                    raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                 inputs, targets = inputs.to(self.cfg.train_args.device), \
                                   targets.to(self.cfg.train_args.device, non_blocking=True)
                 outputs = model(inputs)
@@ -196,6 +202,8 @@ class TrainClassifier:
                                                          num_labels=self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'TwoLayerNet':
             model = TwoLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,hidden_units=self.cfg.model.hidden_units)
+        elif self.cfg.model.architecture == 'ThreeLayerNet':
+            model = ThreeLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,h1=self.cfg.model.h1, h2=self.cfg.model.h2)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -483,7 +491,14 @@ class TrainClassifier:
             start_time = time.time()
             if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.figure()
-            for _, (inputs, targets, domains, weights) in enumerate(dataloader):
+            # for _, (inputs, targets, domains, weights) in enumerate(dataloader):
+            for batch_idx, batch in enumerate(dataloader):
+                if len(batch) == 3:
+                    inputs, targets, weights = batch
+                elif len(batch) == 4:
+                    inputs, targets, domains, weights = batch
+                else:
+                    raise ValueError("Batch length must be either 3 or 4, not {}".format(len(batch)))
                 #             for _, (inputs, targets, weights) in enumerate(dataloader):
                 inputs = inputs.to(self.cfg.train_args.device)
                 targets = targets.to(self.cfg.train_args.device, non_blocking=True)
@@ -501,6 +516,9 @@ class TrainClassifier:
                 if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                     plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c=targets.cpu().numpy(),
                                 s=25, edgecolor='k')
+                # if self.cfg.dataset.name in ["toy_da"]:
+                #     for idx in range(len(inputs.cpu().numpy()[:,0])):
+                #         if inputs.cpu().numpy()[idx, 0] ==
             if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
                 plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
@@ -528,7 +546,14 @@ class TrainClassifier:
 
                 if ("trn_loss" in print_args) or ("trn_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets, domains) in enumerate(trainloader):
+                        # for _, (inputs, targets, domains) in enumerate(trainloader):
+                        for batch_idx, batch in enumerate(trainloader):
+                            if len(batch) == 2:
+                                inputs, targets = batch
+                            elif len(batch) == 3:
+                                inputs, targets, domains = batch
+                            else:
+                                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                             #                         for _, (inputs, targets) in enumerate(trainloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
@@ -546,7 +571,14 @@ class TrainClassifier:
 
                 if ("val_loss" in print_args) or ("val_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets, domains) in enumerate(valloader):
+                        # for _, (inputs, targets, domains) in enumerate(valloader):
+                        for batch_idx, batch in enumerate(valloader):
+                            if len(batch) == 2:
+                                inputs, targets = batch
+                            elif len(batch) == 3:
+                                inputs, targets, domains = batch
+                            else:
+                                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                             #                         for _, (inputs, targets) in enumerate(valloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
@@ -564,7 +596,14 @@ class TrainClassifier:
 
                 if ("tst_loss" in print_args) or ("tst_acc" in print_args):
                     with torch.no_grad():
-                        for _, (inputs, targets, domains) in enumerate(testloader):
+                        # for _, (inputs, targets, domains) in enumerate(testloader):
+                        for batch_idx, batch in enumerate(testloader):
+                            if len(batch) == 2:
+                                inputs, targets = batch
+                            elif len(batch) == 3:
+                                inputs, targets, domains = batch
+                            else:
+                                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                             #                         for _, (inputs, targets) in enumerate(testloader):
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device, non_blocking=True)
@@ -589,7 +628,14 @@ class TrainClassifier:
                         tst_pred = []
                         tst_true = []
                         tst_metadata = []
-                        for _, (inputs, targets, domains) in enumerate(valloader):
+                        # for _, (inputs, targets, domains) in enumerate(valloader):
+                        for batch_idx, batch in enumerate(valloader):
+                            if len(batch) == 2:
+                                inputs, targets = batch
+                            elif len(batch) == 3:
+                                inputs, targets, domains = batch
+                            else:
+                                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device)
                             outputs = model(inputs)
@@ -598,7 +644,14 @@ class TrainClassifier:
                             val_true.append(detach_and_clone(targets))
                             val_metadata.append(detach_and_clone(domains))
 
-                        for _, (inputs, targets, domains) in enumerate(testloader):
+                        # for _, (inputs, targets, domains) in enumerate(testloader):
+                        for batch_idx, batch in enumerate(testloader):
+                            if len(batch) == 2:
+                                inputs, targets = batch
+                            elif len(batch) == 3:
+                                inputs, targets, domains = batch
+                            else:
+                                raise ValueError("Batch length must be either 2 or 3, not {}".format(len(batch)))
                             inputs, targets = inputs.to(self.cfg.train_args.device), \
                                               targets.to(self.cfg.train_args.device)
                             outputs = model(inputs)

@@ -14,11 +14,13 @@ config = dict(setting="SL",
                               pin_memory=True),
 
 
-              model=dict(architecture='TwoLayerNet',
+              model=dict(architecture='ThreeLayerNet',
                          type='pre-defined',
                          numclasses=2,
                          input_dim=2,
-                         hidden_units=3,
+                         # hidden_units=16,
+                         h1=16,
+                         h2=16,
                          pretrained=False),
 
               ckpt=dict(is_load=False,
@@ -57,7 +59,7 @@ config = dict(setting="SL",
                               device="cuda",
                               print_every=1,
                               results_dir="results/",
-                              print_args=["val_loss", "val_acc", "tst_loss", "tst_acc", "time"],
+                              print_args=["val_loss", "val_acc", "tst_loss", "tst_acc", "trn_acc", "time"],
                               visualize=True,
                               return_args=[]
                               )
