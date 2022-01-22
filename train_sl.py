@@ -82,12 +82,14 @@ class TrainClassifier:
                                     self.cfg.dss_args.type,
                                     self.cfg.dataset.name,
                                     self.da_dir_extension,
+                                    self.cfg.dss_args.similarity_criterion,
                                     str(self.cfg.dss_args.fraction),
                                     str(self.cfg.dss_args.select_every))
         self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
                                           self.cfg.dss_args.type,
                                           self.cfg.dataset.name,
                                           self.da_dir_extension,
+                                          self.cfg.dss_args.similarity_criterion,
                                           str(self.cfg.dss_args.fraction),
                                           str(self.cfg.dss_args.select_every))
         os.makedirs(all_logs_dir, exist_ok=True)
@@ -343,6 +345,7 @@ class TrainClassifier:
                                 self.cfg.dss_args.type,
                                 self.cfg.dataset.name,
                                 self.da_dir_extension,
+                                self.cfg.dss_args.similarity_criterion,
                                 str(self.cfg.dss_args.fraction),
                                 str(self.cfg.dss_args.select_every))
         checkpoint_path = os.path.join(ckpt_dir, 'model.pt')

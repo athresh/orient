@@ -174,6 +174,10 @@ class SMIStrategy(DataSelectionStrategy):
 
             self.query_grads_per_elem = self.val_grads_per_elem[0:self.query_size, :]
 
+    # def get_data(self, valid):
+    #     trn_data, trn_targets = self.trainloader.Dataset[:]
+    #
+
     def select(self, budget, model_params):
         """
 
@@ -232,7 +236,24 @@ class SMIStrategy(DataSelectionStrategy):
                     query_query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
                                                                       metric=self.metric,
                                                                       method='sklearn')
-            
+            elif self.similarity_criterion == "feature":
+                trn_data, trn_targets = self.trainloader.dataset[:]
+                query_data, query_targets = self.valloader.dataset[0:self.query_size]
+                print(trn_data.shape)
+                print(trn_targets.shape)
+                trn_data = np.hstack((trn_data, trn_targets[:, None]))
+                query_data = np.hstack((query_data, query_targets[:, None]))
+                query_sijs = submodlib.helper.create_kernel(X=query_data,
+                                                            X_rep=trn_data, metric=self.metric,
+                                                            method='sklearn')
+                if self.smi_func_type in ['fl1mi', 'logdetmi']:
+                    data_sijs = submodlib.helper.create_kernel(X=trn_data, metric=self.metric,
+                                                               method='sklearn')
+                if self.smi_func_type in ['logdetmi']:
+                    query_query_sijs = submodlib.helper.create_kernel(X=query_data,
+                                                                      metric=self.metric,
+                                                                      method='sklearn')
+
             if self.smi_func_type == 'fl1mi':
                 obj = submodlib.FacilityLocationMutualInformationFunction(n=self.N_trn,
                                                                 num_queries=self.query_size,
