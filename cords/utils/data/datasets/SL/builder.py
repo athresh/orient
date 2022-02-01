@@ -1658,7 +1658,7 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                                   transform=transform,
                                   split='test', shuffle=True)
         return trainset, valset, testset, imagelist_params['num_classes']
-    elif dset_name == 'toy_da':
+    elif dset_name in ['toy_da', 'toy_da2']:
         np.random.seed(42)
         daParams = kwargs['daParams']
         trn_file = os.path.join(datadir, daParams['source_domains'][0],daParams['source_domains'][0] + '.trn')
