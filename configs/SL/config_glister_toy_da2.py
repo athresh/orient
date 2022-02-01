@@ -2,8 +2,8 @@
 
 config = dict(setting="SL",
 
-              dataset=dict(name="toy_da",
-                           datadir="../data/toy_da",
+              dataset=dict(name="toy_da2",
+                           datadir="../data/toy_da2",
                            feature="dss",
                            type="image",
                            daParams=dict(source_domains=["d0"],

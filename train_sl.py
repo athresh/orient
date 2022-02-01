@@ -72,26 +72,44 @@ class TrainClassifier:
         # self.config_file = config_file
         # self.cfg = load_config_data(self.config_file)
         self.cfg = config_data
-        if self.cfg.dataset.name == "toy_da":
+        if self.cfg.dataset.name in ["toy_da", "toy_da2"]:
             self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(self.cfg.dataset.daParams.target_domains)
         else:
             self.da_dir_extension = str(self.cfg.dataset.customImageListParams.source_domains) + '->' + str(
                 self.cfg.dataset.customImageListParams.target_domains)
         results_dir = osp.abspath(osp.expanduser(self.cfg.train_args.results_dir))
-        all_logs_dir = os.path.join(results_dir, self.cfg.setting,
-                                    self.cfg.dss_args.type,
-                                    self.cfg.dataset.name,
-                                    self.da_dir_extension,
-                                    self.cfg.dss_args.similarity_criterion,
-                                    str(self.cfg.dss_args.fraction),
-                                    str(self.cfg.dss_args.select_every))
-        self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
-                                          self.cfg.dss_args.type,
-                                          self.cfg.dataset.name,
-                                          self.da_dir_extension,
-                                          self.cfg.dss_args.similarity_criterion,
-                                          str(self.cfg.dss_args.fraction),
-                                          str(self.cfg.dss_args.select_every))
+        if self.cfg.dss_args.type == 'SMI':
+            all_logs_dir = os.path.join(results_dir, self.cfg.setting,
+                                        self.cfg.dss_args.type,
+                                        self.cfg.dataset.name,
+                                        self.da_dir_extension,
+                                        self.cfg.dss_args.smi_func_type,
+                                        self.cfg.dss_args.similarity_criterion,
+                                        str(self.cfg.dss_args.fraction),
+                                        str(self.cfg.dss_args.select_every))
+            self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
+                                              self.cfg.dss_args.type,
+                                              self.cfg.dataset.name,
+                                              self.da_dir_extension,
+                                              self.cfg.dss_args.smi_func_type,
+                                              self.cfg.dss_args.similarity_criterion,
+                                              str(self.cfg.dss_args.fraction),
+                                              str(self.cfg.dss_args.select_every))
+        else:
+            all_logs_dir = os.path.join(results_dir, self.cfg.setting,
+                                        self.cfg.dss_args.type,
+                                        self.cfg.dataset.name,
+                                        self.da_dir_extension,
+                                        self.cfg.dss_args.similarity_criterion,
+                                        str(self.cfg.dss_args.fraction),
+                                        str(self.cfg.dss_args.select_every))
+            self.all_plots_dir = os.path.join(results_dir, self.cfg.setting,
+                                              self.cfg.dss_args.type,
+                                              self.cfg.dataset.name,
+                                              self.da_dir_extension,
+                                              self.cfg.dss_args.similarity_criterion,
+                                              str(self.cfg.dss_args.fraction),
+                                              str(self.cfg.dss_args.select_every))
         os.makedirs(all_logs_dir, exist_ok=True)
         os.makedirs(self.all_plots_dir, exist_ok=True)
         # setup logger
@@ -285,7 +303,7 @@ class TrainClassifier:
                                                                self.cfg.dataset.feature,
                                                                imagelist_params = self.cfg.dataset.customImageListParams,
                                                                preprocess_params = self.cfg.dataset.preprocess)
-        elif self.cfg.dataset.name == "toy_da":
+        elif self.cfg.dataset.name in ["toy_da", "toy_da2"]:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
@@ -333,21 +351,30 @@ class TrainClassifier:
 
         # Checkpoint file
         checkpoint_dir = osp.abspath(osp.expanduser(self.cfg.ckpt.dir))
-        # if self.cfg.dss_args.type == 'SMI':
-        #     ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
-        #                             self.cfg.dss_args.type,
-        #                             self.cfg.dss_args.smi_func_tye,
-        #                             self.cfg.dataset.name,
-        #                             str(self.cfg.dss_args.fraction),
-        #                             str(self.cfg.dss_args.select_every))
-        # else:
-        ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
-                                self.cfg.dss_args.type,
-                                self.cfg.dataset.name,
-                                self.da_dir_extension,
-                                self.cfg.dss_args.similarity_criterion,
-                                str(self.cfg.dss_args.fraction),
-                                str(self.cfg.dss_args.select_every))
+        if self.cfg.dss_args.type == 'SMI':
+            ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+                                        self.cfg.dss_args.type,
+                                        self.cfg.dataset.name,
+                                        self.da_dir_extension,
+                                        self.cfg.dss_args.smi_func_type,
+                                        self.cfg.dss_args.similarity_criterion,
+                                        str(self.cfg.dss_args.fraction),
+                                        str(self.cfg.dss_args.select_every))
+        else:
+            ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+                                        self.cfg.dss_args.type,
+                                        self.cfg.dataset.name,
+                                        self.da_dir_extension,
+                                        self.cfg.dss_args.similarity_criterion,
+                                        str(self.cfg.dss_args.fraction),
+                                        str(self.cfg.dss_args.select_every))
+        # ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+        #                         self.cfg.dss_args.type,
+        #                         self.cfg.dataset.name,
+        #                         self.da_dir_extension,
+        #                         self.cfg.dss_args.similarity_criterion,
+        #                         str(self.cfg.dss_args.fraction),
+        #                         str(self.cfg.dss_args.select_every))
         checkpoint_path = os.path.join(ckpt_dir, 'model.pt')
         os.makedirs(ckpt_dir, exist_ok=True)
 
@@ -532,6 +559,8 @@ class TrainClassifier:
                 #         if inputs.cpu().numpy()[idx, 0] ==
             if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
+                plt.xlim(-2.0, 2.5)
+                plt.ylim(-1.0, 2.0)
                 plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
                 # HK: For unsupervised add psuedo labels to valdataloader.
             epoch_time = time.time() - start_time

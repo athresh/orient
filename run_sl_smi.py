@@ -14,6 +14,7 @@ if __name__=='__main__':
     parser.add_argument('--num_epochs', type=int, default=300)
     parser.add_argument('--source_domains', type=str, default="real")
     parser.add_argument('--target_domains', type=str, default="clipart")
+    parser.add_argument('--similarity_criterion', type=str, default="gradient")
     args = parser.parse_args()
     config_file = args.config_file
     config_data = load_config_data(args.config_file)
@@ -26,7 +27,8 @@ if __name__=='__main__':
     config_data.train_args.device = args.device
     config_data.train_args.print_every = args.print_every
     config_data.train_args.num_epochs = args.num_epochs
-    if config_data.dataset.name in ["domainnet", "toy_da", "office31", "officehome"]:
+    config_data.dss_args.similarity_criterion = args.similarity_criterion
+    if config_data.dataset.name in ["domainnet", "toy_da", "toy_da2", "office31", "officehome"]:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")
         if config_data.dataset.name in ["domainnet", "office31", "officehome"]:

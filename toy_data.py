@@ -4,6 +4,7 @@ from sklearn import datasets
 import numpy as np
 import torch
 from sklearn.datasets import make_moons, make_blobs, make_classification
+from scipy.spatial import ConvexHull
 import random
 import subprocess
 from sklearn.preprocessing import StandardScaler
@@ -361,10 +362,12 @@ def make_data(n_samples=50000, n_domains=2, plot=False, noisemodels=None,
         for _ in range(n_domains):
             # scale = np.eye(2) + np.random.normal(0,.1,size=(2,2))
             a = angles[_]
-            scale = np.array([[np.cos(a), np.sin(a)],
-                              [-np.sin(a), np.cos(a)]])
-
+            # scale = np.array([[np.cos(a), np.sin(a)],
+            #                   [-np.sin(a), np.cos(a)]])
+            scale = np.array([[1, 0],
+                              [0, 1]])
             bias = 0  # np.random.normal(0,.5,size=(1,2))
+            bias = np.array([0.4, 0])
         noisemodels.append(lambda x: x.dot(scale) + bias)
 
     if seed is not None:
@@ -384,8 +387,12 @@ def make_data(n_samples=50000, n_domains=2, plot=False, noisemodels=None,
     # #                                        n_redundant=0, n_clusters_per_class=1, class_sep=1)
 
     X, y = make_moons(n_samples=n_total, shuffle=True, noise=.1)
+    # X, y = make_blobs(n_samples=n_total, shuffle=True, n_features=2)
     X = X.reshape(n_domains, 3, n_samples, 2)
     y = y.reshape(n_domains, 3, n_samples)
+    mask_val = np.random.randint(0,n_samples+1, int(n_samples*0.01)+1)
+    # mask_val = list(map(bool, np.random.choice(2, int(n_samples*0.01))))
+    mask_val = [True if i in mask_val else False for i in range(n_samples)]
     # plt.scatter(X[0, 0, :, 0], X[0, 0, :, 1], c=y[0, 0, :])
     # plt.show()
     # plt.scatter(X[1, 0, :, 0], X[1,0, :, 1], c=y[1, 0, :])
@@ -399,19 +406,33 @@ def make_data(n_samples=50000, n_domains=2, plot=False, noisemodels=None,
     # print(Xs)
 
     # d = [(X, y) for (X, y) in zip(Xs, ys)]
-    mask_0 = [idx for idx,val in enumerate(y[1, 0, :]) if val==1]
-    print(mask_0)
-    # plt.scatter(X[0, 0, mask_0, 0], X[0, 0, mask_0, 1], c=y[0, 0, mask_0], cmap=plt.get_cmap('cividis'))
+    mask_0 = [idx for idx, val in enumerate(y[1, 2, :]) if val == 0]
+    mask_1 = [idx for idx, val in enumerate(y[1, 2, :]) if val == 1]
+    # hull_0 = ConvexHull(X[1, 2, mask_0, :])
+    # hull_1 = ConvexHull(X[1, 2, mask_1, :])
+
+    dt = 0
+    p0 = plt.scatter(X[0, dt, :, 0], X[0, dt, :, 1], c=y[0, 0, :], cmap=plt.get_cmap('spring'), label="source domain")
     # plt.title("Toy data domain 0")
-    plt.scatter(X[1, 0, mask_0, 0], X[1, 0, mask_0, 1], c=y[1, 0, mask_0], cmap=plt.get_cmap('viridis'))
-    plt.title("Toy data domain 1")
+    p1 = plt.scatter(X[1, dt, mask_val, 0], X[1, dt, mask_val, 1], c=y[1, 0, mask_val], cmap=plt.get_cmap('RdYlGn'), label="target domain")
+    # p1 = plt.scatter(X[1, dt, :, 0], X[1, dt, :, 1], c=y[1, 0, :], cmap=plt.get_cmap('RdYlGn'), label="target domain")
+    plt.legend(handles=p0.legend_elements()[0]+p1.legend_elements()[0], labels=["source domain class 0", "source domain class 1", "target domain class 0", "target domain class 1"])
+    # plt.scatter(X[1, 1, mask_val, 0], X[1, 1, mask_val, 1], c=y[1, 1, mask_val], cmap=plt.get_cmap('RdYlGn'))
+    # for simplex in hull_0.simplices:
+    #     plt.plot(X[1, 2, hull_0.vertices, 0], X[1, 2, hull_0.vertices, 1], 'r--', lw=2)
+    #     plt.plot(X[1, 2, hull_0.vertices[0], 0], X[1, 2, hull_0.vertices[0], 1], 'ro')
+    # plt.legend(['first', 'last'])
+    plt.title("Toy data train set and validation set")
     plt.show()
+
+
+
     if save_data:
-        data_dir = '../data/toy_da'
+        data_dir = '../data/toy_da2'
         for i in range(n_domains):
             np.savetxt(data_dir+'/d{}/d{}.trn'.format(i,i),np.insert(X[i,0,:,:],2,y[i,0,:],axis=1), delimiter=",")
-            np.savetxt(data_dir + '/d{}/d{}.val'.format(i,i), np.insert(X[i,1,:,:],2,y[i,1,:],axis=1), delimiter=",")
+            np.savetxt(data_dir + '/d{}/d{}.val'.format(i,i), np.insert(X[i,1,mask_val,:],2,y[i,1,mask_val],axis=1), delimiter=",")
             np.savetxt(data_dir + '/d{}/d{}.tst'.format(i,i), np.insert(X[i,2,:,:],2,y[i,2,:],axis=1), delimiter=",")
     return X, y
 
-data = make_data(n_samples=10000, n_domains=2, plot=True, save_data=False, seed=0)
+data = make_data(n_samples=10000, n_domains=2, plot=True, save_data=True, seed=0)
