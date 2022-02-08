@@ -303,7 +303,7 @@ class TrainClassifier:
                                                                self.cfg.dataset.feature,
                                                                imagelist_params = self.cfg.dataset.customImageListParams,
                                                                preprocess_params = self.cfg.dataset.preprocess)
-        elif "toy_da" in self.cfg.dataset.name:
+        elif self.cfg.dataset.name in ["toy_da", "toy_da2", "toy_da3"]:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
