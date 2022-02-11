@@ -5,6 +5,7 @@ import torch
 from scipy.sparse import csr_matrix
 from torch.utils.data.sampler import SubsetRandomSampler
 from .dataselectionstrategy import DataSelectionStrategy
+from torch.utils.data import Subset, DataLoader
 import submodlib
 # from submodlib import FacilityLocationMutualInformationFunction, FacilityLocationVariantMutualInformationFunction
 
@@ -239,8 +240,6 @@ class SMIStrategy(DataSelectionStrategy):
             elif self.similarity_criterion == "feature":
                 trn_data, trn_targets = self.trainloader.dataset[:]
                 query_data, query_targets = self.valloader.dataset[0:self.query_size]
-                print(trn_data.shape)
-                print(trn_targets.shape)
                 trn_data = np.hstack((trn_data, trn_targets[:, None]))
                 query_data = np.hstack((query_data, query_targets[:, None]))
                 query_sijs = submodlib.helper.create_kernel(X=query_data,
@@ -282,6 +281,91 @@ class SMIStrategy(DataSelectionStrategy):
                                       stopIfNegativeGain=self.stopIfNegativeGain, verbose=False)
             greedyIdxs = [x[0] for x in greedyList]
             gammas = [1]*budget
+
+        elif self.selection_type == 'PerClass':
+            self.get_labels(valid=self.valid)
+            greedyIdxs = []
+            gammas = []
+            for i in range(self.num_classes):
+                trn_subset_idx = torch.where(self.trn_lbls == i)[0].tolist()
+                trn_data_sub = Subset(self.trainloader.dataset, trn_subset_idx)
+                query_size_per_class = np.ceil(self.query_size/self.num_classes)
+                N_trn_per_class = len(trn_subset_idx)
+                budget_per_class = np.ceil(budget/self.num_classes)
+                self.pctrainloader = DataLoader(trn_data_sub, batch_size=self.trainloader.batch_size,
+                                                shuffle=False, pin_memory=True, collate_fn=self.trainloader.collate_fn)
+                if self.valid:
+                    val_subset_idx = torch.where(self.val_lbls == i)[0].tolist()
+                    val_data_sub = Subset(self.valloader.dataset, val_subset_idx)
+                    self.pcvalloader = DataLoader(val_data_sub, batch_size=self.trainloader.batch_size,
+                                                  shuffle=False, pin_memory=True,
+                                                  collate_fn=self.trainloader.collate_fn)
+                if self.similarity_criterion == "gradient":
+                    self.compute_gradients(valid=self.valid, perClass=True)
+                    trn_gradients = self.grads_per_elem
+                    query_gradients = self.query_grads_per_elem
+
+                    query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                                X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                                method='sklearn')
+
+                    if self.smi_func_type in ['fl1mi', 'logdetmi']:
+                        data_sijs = submodlib.helper.create_kernel(X=trn_gradients.cpu().numpy(), metric=self.metric,
+                                                                   method='sklearn')
+                    if self.smi_func_type in ['logdetmi']:
+                        query_query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
+                                                                          metric=self.metric,
+                                                                          method='sklearn')
+                elif self.similarity_criterion == "feature":
+                    trn_data, trn_targets = self.pctrainloader.dataset[:]
+                    query_data, query_targets = self.pcvalloader.dataset[0:query_size_per_class]
+                    trn_data = np.hstack((trn_data, trn_targets[:, None]))
+                    query_data = np.hstack((query_data, query_targets[:, None]))
+                    query_sijs = submodlib.helper.create_kernel(X=query_data,
+                                                                X_rep=trn_data, metric=self.metric,
+                                                                method='sklearn')
+                    if self.smi_func_type in ['fl1mi', 'logdetmi']:
+                        data_sijs = submodlib.helper.create_kernel(X=trn_data, metric=self.metric,
+                                                                   method='sklearn')
+                    if self.smi_func_type in ['logdetmi']:
+                        query_query_sijs = submodlib.helper.create_kernel(X=query_data,
+                                                                          metric=self.metric,
+                                                                          method='sklearn')
+
+                if self.smi_func_type == 'fl1mi':
+                    obj = submodlib.FacilityLocationMutualInformationFunction(n=N_trn_per_class,
+                                                                    num_queries=query_size_per_class,
+                                                                    data_sijs=data_sijs,
+                                                                    query_sijs=query_sijs,
+                                                                    magnificationEta=self.eta)
+                if self.smi_func_type == 'fl2mi':
+                    obj = submodlib.FacilityLocationVariantMutualInformationFunction(n=N_trn_per_class,
+                                                                    num_queries=query_size_per_class,
+                                                                    query_sijs=query_sijs,
+                                                                    queryDiversityEta=self.eta)
+                if self.smi_func_type == 'logdetmi':
+                    obj = submodlib.LogDeterminantMutualInformationFunction(n=N_trn_per_class,
+                                                                            num_queries=query_size_per_class,
+                                                                            data_sijs=data_sijs,
+                                                                            lambdaVal=self.lambdaVal,
+                                                                            query_sijs=query_sijs,
+                                                                            query_query_sijs=query_query_sijs,
+                                                                            magnificationEta=self.eta
+                                                                            )
+                if self.smi_func_type == 'gcmi':
+                    obj = submodlib.GraphCutMutualInformationFunction(n=N_trn_per_class,
+                                                                      num_queries=query_size_per_class,
+                                                                      query_sijs=query_sijs)
+                greedyListPerClass = obj.maximize(budget=budget, optimizer=self.optimizer, stopIfZeroGain=self.stopIfZeroGain,
+                                          stopIfNegativeGain=self.stopIfNegativeGain, verbose=False)
+                greedyIdxs.extend([x[0] for x in greedyListPerClass])
+                gammas.extend([1]*budget)
+
+        if self.selection_type in ["PerClass"]:
+            rand_indices = np.random.permutation(len(greedyIdxs))
+            greedyIdxs = list(np.array(greedyIdxs)[rand_indices])
+            gammas = list(np.array(gammas)[rand_indices])
+
         smi_end_time = time.time()
         self.logger.info("SMI algorithm Subset Selection time is: %.4f", smi_end_time - smi_start_time)
         return greedyIdxs, gammas
