@@ -173,7 +173,10 @@ class SMIStrategy(DataSelectionStrategy):
             else:
                 self.val_grads_per_elem = l0_grads
 
-            self.query_grads_per_elem = self.val_grads_per_elem[0:self.query_size, :]
+            if perClass:
+                self.query_grads_per_elem = self.val_grads_per_elem
+            else:
+                self.query_grads_per_elem = self.val_grads_per_elem[0:self.query_size, :]
 
     # def get_data(self, valid):
     #     trn_data, trn_targets = self.trainloader.Dataset[:]
@@ -289,9 +292,8 @@ class SMIStrategy(DataSelectionStrategy):
             for i in range(self.num_classes):
                 trn_subset_idx = torch.where(self.trn_lbls == i)[0].tolist()
                 trn_data_sub = Subset(self.trainloader.dataset, trn_subset_idx)
-                query_size_per_class = np.ceil(self.query_size/self.num_classes)
                 N_trn_per_class = len(trn_subset_idx)
-                budget_per_class = np.ceil(budget/self.num_classes)
+                budget_per_class = np.ceil(budget/self.num_classes).astype('int')
                 self.pctrainloader = DataLoader(trn_data_sub, batch_size=self.trainloader.batch_size,
                                                 shuffle=False, pin_memory=True, collate_fn=self.trainloader.collate_fn)
                 if self.valid:
@@ -304,7 +306,7 @@ class SMIStrategy(DataSelectionStrategy):
                     self.compute_gradients(valid=self.valid, perClass=True)
                     trn_gradients = self.grads_per_elem
                     query_gradients = self.query_grads_per_elem
-
+                    query_size_per_class = query_gradients.shape[0]
                     query_sijs = submodlib.helper.create_kernel(X=query_gradients.cpu().numpy(),
                                                                 X_rep=trn_gradients.cpu().numpy(), metric=self.metric,
                                                                 method='sklearn')
@@ -318,7 +320,8 @@ class SMIStrategy(DataSelectionStrategy):
                                                                           method='sklearn')
                 elif self.similarity_criterion == "feature":
                     trn_data, trn_targets = self.pctrainloader.dataset[:]
-                    query_data, query_targets = self.pcvalloader.dataset[0:query_size_per_class]
+                    query_data, query_targets = self.pcvalloader.dataset[0:np.ceil(self.query_size/self.num_classes).astype('int'),:]
+                    query_size_per_class = query_data.shape[0]
                     trn_data = np.hstack((trn_data, trn_targets[:, None]))
                     query_data = np.hstack((query_data, query_targets[:, None]))
                     query_sijs = submodlib.helper.create_kernel(X=query_data,
