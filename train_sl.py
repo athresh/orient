@@ -72,7 +72,7 @@ class TrainClassifier:
         # self.config_file = config_file
         # self.cfg = load_config_data(self.config_file)
         self.cfg = config_data
-        if self.cfg.dataset.name in ["toy_da", "toy_da2"]:
+        if "toy_da" in self.cfg.dataset.name:
             self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(self.cfg.dataset.daParams.target_domains)
         else:
             self.da_dir_extension = str(self.cfg.dataset.customImageListParams.source_domains) + '->' + str(
@@ -305,7 +305,7 @@ class TrainClassifier:
                                                                self.cfg.dataset.feature,
                                                                imagelist_params = self.cfg.dataset.customImageListParams,
                                                                preprocess_params = self.cfg.dataset.preprocess)
-        elif self.cfg.dataset.name in ["toy_da", "toy_da2", "toy_da3"]:
+        elif "toy_da" in self.cfg.dataset.name:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
@@ -562,8 +562,12 @@ class TrainClassifier:
                 #         if inputs.cpu().numpy()[idx, 0] ==
             if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
                 plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
-                plt.xlim(-2.0, 2.5)
-                plt.ylim(-1.0, 2.0)
+                if self.cfg.dataset.name == 'toy_da3':
+                    plt.xlim(-2.0, 5.0)
+                    plt.ylim(-1.0, 2.0)
+                else:
+                    plt.xlim(-2.0, 2.5)
+                    plt.ylim(-1.0, 2.0)
                 plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
                 # HK: For unsupervised add psuedo labels to valdataloader.
             epoch_time = time.time() - start_time
