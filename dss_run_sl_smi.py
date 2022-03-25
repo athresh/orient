@@ -48,6 +48,6 @@ if __name__=='__main__':
             config_data.dataset.daParams.source_domains = source_domains
             config_data.dataset.daParams.target_domains = target_domains
     for i in range(args.num_runs):
-        print("RUN: "+ i)
+        print(f"RUN: {i}")
         classifier = TrainClassifier(config_data)
         classifier.train()
