@@ -19,8 +19,6 @@ from cords.utils.models import *
 import matplotlib.pyplot as plt
 
 
-
-
 def move_to(obj, device):
     if isinstance(obj, dict):
         return {k: move_to(v, device) for k, v in obj.items()}
@@ -73,15 +71,18 @@ class TrainClassifier:
         version = config_data.dss_args.type
         if config_data.dss_args.type == 'SMI':
             version += f"_{config_data.dss_args.smi_func_type}"
-        exp_prefix = f"{version}_{config_data.dataset.name}_{'-'.join(config_data.dataset.customImageListParams.source_domains)}_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}"
-        self.logger = setup_logger(exp_prefix, config_data, exp_id=os.getpid(), snapshot_gap=config_data.ckpt.save_every)
+        exp_domains = f"{'-'.join(config_data.dataset.customImageListParams.source_domains)}_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}"
+        config_data['exp_domains'] = exp_domains
+        config_data['version'] = version
+        self.logger = setup_logger(f"{version}_{exp_domains}", config_data, exp_id=os.getpid(),
+                                   snapshot_gap=config_data.ckpt.save_every)
         self.cfg = config_data
         if "toy_da" in self.cfg.dataset.name:
-            self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(self.cfg.dataset.daParams.target_domains)
+            self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(
+                self.cfg.dataset.daParams.target_domains)
         else:
             self.da_dir_extension = str(self.cfg.dataset.customImageListParams.source_domains) + '->' + str(
                 self.cfg.dataset.customImageListParams.target_domains)
-
 
     """
     ############################## Loss Evaluation ##############################
@@ -182,9 +183,11 @@ class TrainClassifier:
             model = DistilBertClassifier.from_pretrained('distilbert-base-uncased',
                                                          num_labels=self.cfg.model.numclasses)
         elif self.cfg.model.architecture == 'TwoLayerNet':
-            model = TwoLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,hidden_units=self.cfg.model.hidden_units)
+            model = TwoLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,
+                                hidden_units=self.cfg.model.hidden_units)
         elif self.cfg.model.architecture == 'ThreeLayerNet':
-            model = ThreeLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses,h1=self.cfg.model.h1, h2=self.cfg.model.h2)
+            model = ThreeLayerNet(self.cfg.model.input_dim, self.cfg.model.numclasses, h1=self.cfg.model.h1,
+                                  h2=self.cfg.model.h2)
         model = model.to(self.cfg.train_args.device)
         return model
 
@@ -255,9 +258,9 @@ class TrainClassifier:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
                                                                self.cfg.dataset.feature,
-                                                               imagelist_params = self.cfg.dataset.customImageListParams,
-                                                               preprocess_params = self.cfg.dataset.preprocess,
-                                                               augment_queryset = self.cfg.dss_args.augment_queryset)
+                                                               imagelist_params=self.cfg.dataset.customImageListParams,
+                                                               preprocess_params=self.cfg.dataset.preprocess,
+                                                               augment_queryset=self.cfg.dss_args.augment_queryset)
         elif "toy_da" in self.cfg.dataset.name:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
@@ -291,7 +294,6 @@ class TrainClassifier:
 
             testloader = torch.utils.data.DataLoader(testset, batch_size=tst_batch_size,
                                                      shuffle=False, pin_memory=True)
-
 
         substrn_losses = list()  # np.zeros(configdata['train_args']['num_epochs'])
         trn_losses = list()
@@ -480,13 +482,16 @@ class TrainClassifier:
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
                 if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c=targets.cpu().numpy(),
+                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o',
+                                c=targets.cpu().numpy(),
                                 s=25, edgecolor='k')
                 # if self.cfg.dataset.name in ["toy_da"]:
                 #     for idx in range(len(inputs.cpu().numpy()[:,0])):
                 #         if inputs.cpu().numpy()[idx, 0] ==
             if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
+                plt.title(
+                    "Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type,
+                                                            self.cfg.dss_args.fraction))
                 if self.cfg.dataset.name == 'toy_da3':
                     plt.xlim(-2.0, 5.0)
                     plt.ylim(-1.0, 2.0)
@@ -537,11 +542,11 @@ class TrainClassifier:
                                 trn_total += targets.size(0)
                                 trn_correct += predicted.eq(targets).sum().item()
                         trn_losses.append(trn_loss)
-                        logger.record_tabular("Training Loss",  trn_losses[-1])
+                        logger.record_tabular("Training Loss", trn_losses[-1])
 
                     if "trn_acc" in print_args:
                         trn_acc.append(trn_correct / trn_total)
-                        logger.record_tabular("Training Accuracy",  trn_acc[-1])
+                        logger.record_tabular("Training Accuracy", trn_acc[-1])
 
                 if ("val_loss" in print_args) or ("val_acc" in print_args):
                     with torch.no_grad():
@@ -564,11 +569,11 @@ class TrainClassifier:
                                 val_total += targets.size(0)
                                 val_correct += predicted.eq(targets).sum().item()
                         val_losses.append(val_loss)
-                        logger.record_tabular("Validation Loss",  val_losses[-1])
+                        logger.record_tabular("Validation Loss", val_losses[-1])
 
                     if "val_acc" in print_args:
                         val_acc.append(val_correct / val_total)
-                        logger.record_tabular("Validation Accuracy",  val_acc[-1])
+                        logger.record_tabular("Validation Accuracy", val_acc[-1])
 
                 if ("tst_loss" in print_args) or ("tst_acc" in print_args):
                     with torch.no_grad():
@@ -592,10 +597,10 @@ class TrainClassifier:
                                 tst_correct += predicted.eq(targets).sum().item()
 
                         tst_losses.append(tst_loss)
-                        logger.record_tabular("Test Loss",  tst_losses[-1])
+                        logger.record_tabular("Test Loss", tst_losses[-1])
                     if "tst_acc" in print_args:
                         tst_acc.append(tst_correct / tst_total)
-                        logger.record_tabular("Test Accuracy",  tst_acc[-1])
+                        logger.record_tabular("Test Accuracy", tst_acc[-1])
 
                 if ("worst_acc" in print_args):
                     with torch.no_grad():
@@ -653,21 +658,20 @@ class TrainClassifier:
 
                 if "subtrn_acc" in print_args:
                     subtrn_acc.append(subtrn_correct / subtrn_total)
-                    logger.record_tabular("Subset Accuracy",  subtrn_acc[-1])
+                    logger.record_tabular("Subset Accuracy", subtrn_acc[-1])
 
                 if "subtrn_losses" in print_args:
                     subtrn_losses.append(subtrn_loss)
-                    logger.record_tabular("Subset Loss",  subtrn_losses[-1])
+                    logger.record_tabular("Subset Loss", subtrn_losses[-1])
 
                 print_str = "Epoch: " + str(epoch + 1)
-                logger.record_tabular("epoch",  epoch + 1)
-                logger.record_tabular("Timing",  timing[-1])
-                logger.record_tabular("Total timing",  np.sum(timing))
+                logger.record_tabular("epoch", epoch + 1)
+                logger.record_tabular("Timing", timing[-1])
+                logger.record_tabular("Total timing", np.sum(timing))
 
                 # report metric to ray for hyperparameter optimization
                 if 'report_tune' in self.cfg and self.cfg.report_tune:
                     tune.report(mean_accuracy=val_acc[-1])
-
 
                 logger.dump_tabular()
             """
@@ -706,6 +710,5 @@ class TrainClassifier:
                 }
 
                 # save checkpoint
-                self.save_ckpt(ckpt_state, logger.get_snapshot_dir()+f"/model_{epoch+1}.pt")
+                self.save_ckpt(ckpt_state, logger.get_snapshot_dir() + f"/model_{epoch + 1}.pt")
                 logger.info("Model checkpoint saved at epoch: {0:d}".format(epoch + 1))
-
