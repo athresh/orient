@@ -12,6 +12,6 @@ ray~=1.7.0
 setuptools~=58.0.4
 wilds==1.2.2
 git+https://github.com/krishnatejakk/submodlib.git@master
-tabulate
-git+https://github.com/harshakokel/reggol.git@master
+transformer
+git+https://github.com/harshakokel/reggol.git@main
 apricot-select
