@@ -71,7 +71,7 @@ class TrainClassifier:
         version = config_data.dss_args.type
         if config_data.dss_args.type == 'SMI':
             version += f"_{config_data.dss_args.smi_func_type}"
-        exp_domains = f"{'-'.join(config_data.dataset.customImageListParams.source_domains)}_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}"
+        exp_domains = f"{config_data.dataset.name}_{'-'.join(config_data.dataset.customImageListParams.source_domains)}_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}"
         config_data['exp_domains'] = exp_domains
         config_data['version'] = version
         self.logger = setup_logger(f"{version}_{exp_domains}", config_data, exp_id=os.getpid(),
