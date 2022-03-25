@@ -19,6 +19,7 @@ if __name__=='__main__':
     parser.add_argument('--similarity_criterion', type=str, default="gradient")
     parser.add_argument('--ckpt_file', type=str, default=None)
     parser.add_argument('--selection_type', type=str, default="Supervised")
+    parser.add_argument('--num-runs', type=int, default=1)
     args = parser.parse_args()
     config_file = args.config_file
     config_data = load_config_data(args.config_file)
@@ -46,5 +47,7 @@ if __name__=='__main__':
         else:
             config_data.dataset.daParams.source_domains = source_domains
             config_data.dataset.daParams.target_domains = target_domains
-    classifier = TrainClassifier(config_data)
-    classifier.train()
+    for i in range(args.num_runs):
+        print("RUN: "+ i)
+        classifier = TrainClassifier(config_data)
+        classifier.train()
