@@ -51,6 +51,8 @@ class CustomImageList(Dataset):
             and returns a transformed version. E.g, ``transforms.RandomCrop``.
         - **target_transform** (callable, optional): A function/transform that takes in the target and transforms it.
         - **split** (str): split label, default None
+        - **shuffle** (boolean): shuffle data list, default False
+        - **augment_val** (list of str): List of validation domains to be added
     .. note:: `data_list_folder` is expected to have files with <domain>.txt or <domain>_<split>.txt.
          Each file line contains 2 values in the following format.
         ::
@@ -61,7 +63,7 @@ class CustomImageList(Dataset):
         The first value is the relative path from [root]/[domain]/images/, and the second value is the label of the corresponding image.
     """
 
-    def __init__(self, root, domains, num_classes, data_list_folder, transform=None, target_transform=None, split=None, shuffle=False):
+    def __init__(self, root, domains, num_classes, data_list_folder, transform=None, target_transform=None, split=None, shuffle=False, augment_val=None ):
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
@@ -69,6 +71,9 @@ class CustomImageList(Dataset):
         # super().__init__(root, transform=transform, target_transform=target_transform)
         self._num_classes = num_classes
         self.data_list = self.parse_data_file(data_list_folder, domains, split)
+        if augment_val:
+            self.data_list += self.parse_data_file(data_list_folder, augment_val, 'val')
+            np.random.shuffle(self.data_list)
         self.loader = torchvision.datasets.folder.default_loader
 
     def __getitem__(self, index):
@@ -1577,11 +1582,15 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
             normalize,
         ])
         imagelist_params = kwargs['imagelist_params']
+        augment_val = None
+        if 'augment_queryset' in kwargs and kwargs['augment_queryset']:
+            augment_val = imagelist_params['target_domains']
         trainset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
                                    domains=imagelist_params['source_domains'],
                                    data_list_folder=imagelist_params['image_list_folder'],
-                                   transform=transform)
+                                   transform=transform,
+                                   augment_val=augment_val)
 
         valset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
@@ -1596,7 +1605,6 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
                                   transform=transform,
                                   split='test')
         return trainset, valset, testset, imagelist_params['num_classes']
-        return trainset, valset, testset, imagelist_params['num_classes']
     elif dset_name == 'officehome':
         preprocess_params = kwargs['preprocess_params']
         normalize = transforms.Normalize(mean=preprocess_params['normalizer_mean'], std=preprocess_params['normalizer_std'])
@@ -1608,12 +1616,15 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
             normalize,
         ])
         imagelist_params = kwargs['imagelist_params']
+        augment_val = None
+        if 'augment_queryset' in kwargs and kwargs['augment_queryset']:
+            augment_val = imagelist_params['target_domains']
         trainset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
                                    domains=imagelist_params['source_domains'],
                                    data_list_folder=imagelist_params['image_list_folder'],
-                                   transform=transform)
-
+                                   transform=transform,
+                                   augment_val=augment_val)
         valset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
                                    domains=imagelist_params['target_domains'],
@@ -1639,11 +1650,15 @@ def gen_dataset(datadir, dset_name, feature, isnumpy=False, **kwargs):
             normalize,
         ])
         imagelist_params = kwargs['imagelist_params']
+        augment_val = None
+        if 'augment_queryset' in kwargs and kwargs['augment_queryset']:
+            augment_val = imagelist_params['target_domains']
         trainset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
                                    domains=imagelist_params['source_domains'],
                                    data_list_folder=imagelist_params['image_list_folder'],
-                                   transform=transform)
+                                   transform=transform,
+                                   augment_val=augment_val)
 
         valset = CustomImageList(datadir,
                                    num_classes=imagelist_params['num_classes'],
