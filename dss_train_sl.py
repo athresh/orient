@@ -70,10 +70,11 @@ def detach_and_clone(obj):
 
 class TrainClassifier:
     def __init__(self, config_data):
-        self.logger = setup_logger(f"{config_data.dss_args.smi_func_type}_{config_data.dataset.name}_"
-                                   f"{'-'.join(config_data.dataset.customImageListParams.source_domains)}"
-                                   f"_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}",
-                                   config_data, exp_id=os.getpid(), snapshot_gap=config_data.ckpt.save_every )
+        version = config_data.dss_args.type
+        if config_data.dss_args.type == 'SMI':
+            version += f"_{config_data.dss_args.smi_func_type}"
+        exp_prefix = f"{version}_{config_data.dataset.name}_{'-'.join(config_data.dataset.customImageListParams.source_domains)}_vs_{'-'.join(config_data.dataset.customImageListParams.target_domains)}"
+        self.logger = setup_logger(exp_prefix, config_data, exp_id=os.getpid(), snapshot_gap=config_data.ckpt.save_every)
         self.cfg = config_data
         if "toy_da" in self.cfg.dataset.name:
             self.da_dir_extension = str(self.cfg.dataset.daParams.source_domains) + '->' + str(self.cfg.dataset.daParams.target_domains)
