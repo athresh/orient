@@ -261,6 +261,8 @@ class TrainClassifier:
                                                                imagelist_params=self.cfg.dataset.customImageListParams,
                                                                preprocess_params=self.cfg.dataset.preprocess,
                                                                augment_queryset=self.cfg.dss_args.augment_queryset)
+            if self.cfg.dss_args.fine_tune:
+                trainset = validset
         elif "toy_da" in self.cfg.dataset.name:
             trainset, validset, testset, num_cls = gen_dataset(self.cfg.dataset.datadir,
                                                                self.cfg.dataset.name,
