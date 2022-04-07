@@ -14,7 +14,7 @@ def labels_equal(y1, y2):
 
 
 def contrastive_loss(margin=1):
-    """Implementation of contrastive loss.
+    """PyTorch Implementation of contrastive loss.
     Original implementation found at https://github.com/samotiian/CCSA
     @param y_true: distance between source and target features
     @param y_pred: tuple or array of two elements, containing source and taget labels

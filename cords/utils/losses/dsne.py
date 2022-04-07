@@ -4,7 +4,7 @@ import torch
 
 def dnse_loss(margin=1):
     def loss(y_true, y_pred):
-        """Tensorflow implementation of d-SNE loss.
+        """PyTorch implementation of d-SNE loss.
         Original Mxnet implementation found at https://github.com/aws-samples/d-SNE.
         @param y_true: tuple or array of two elements, containing source and target features
         @param y_pred: tuple or array of two elements, containing source and taget labels
