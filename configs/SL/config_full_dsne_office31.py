@@ -16,7 +16,7 @@ config = dict(setting="SL",
                                            normalizer_std=[0.229, 0.224, 0.225]),),
 
               dataloader=dict(shuffle=True,
-                              batch_size=16,
+                              batch_size=256,
                               pin_memory=True),
 
 
@@ -45,7 +45,7 @@ config = dict(setting="SL",
               dss_args=dict(type="Full",
                             verbose=True),
 
-              train_args=dict(num_epochs=300,
+              train_args=dict(num_epochs=1000,
                               device="cuda",
                               alpha=0.1,
                               print_every=1,
