@@ -36,6 +36,12 @@ from .senet import SENet18
 from .shufflenet import ShuffleNetG2
 from .shufflenet import ShuffleNetG3
 from .shufflenetv2 import ShuffleNetV2
+from .siamesenet import SiameseResNetPretrained
+from .siamesenet import SiameseResNet18
+from .siamesenet import SiameseResNet34
+from .siamesenet import SiameseResNet50
+from .siamesenet import SiameseResNet101
+from .siamesenet import SiameseResNet152
 from .simpleNN_net import TwoLayerNet
 from .simpleNN_net import ThreeLayerNet
 from .vgg import VGG

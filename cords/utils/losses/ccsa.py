@@ -4,7 +4,15 @@ from torch.nn.modules.loss import _Loss, _WeightedLoss
 from torch.nn import CrossEntropyLoss
 
 
-class DSNELoss(_Loss):
+def euclidean_distance(x1, x2):
+    return torch.sqrt(torch.maximum(torch.sum(torch.square(x1 - x2), dim=1, keepdim=False), 1e-08))
+
+
+def labels_equal(y1, y2):
+    return torch.all(torch.eq(y1, y2), dim=1, keepdim=False)
+
+
+class CCSALoss(_Loss):
     """d-SNE loss for paired batches of source and target features.
     Attributes
     ----------
@@ -21,31 +29,12 @@ class DSNELoss(_Loss):
     For each image in the training batch...
         1. Compare its feature vector to all FVs in the comparison batch
             using a distance function. (L2-norm/Euclidean used here.)
-        2. Find the minimum interclass distance (y_trn != y_cmp) and
-            maximum intraclass distance (y_trn == y_cmp)
-        3. Check that the difference between these two distances is
-            greater than a specified margin.
-        Explanation:
-            -The minimum interclass distance should be large, as FVs
-                from src/tgt pairs should be as distinct as possible
-                when their classes are different.
-            -The maximum intraclass distance should be small, as FVs
-                from src/tgt pairs should be as similar as possible
-                when their classes are the same.
-            -Therefore, these conditions should be true:
-                              `min_interclass` >> `max_interclass`
-           `min_interclass` - `max_interclass` >> `margin`
-        4. Calculate loss for cases where the difference is NOT greater
-            than the margin, as that would invalidate the conditions
-            above. Here, loss == abs(difference).
     """
 
     def __init__(self, margin=1.0, reduction="mean"):
         """Assign parameters as attributes."""
-        super(DSNELoss, self).__init__()
-
+        super(CCSALoss, self).__init__()
         self.margin = margin
-
         if reduction == "mean":
             self.reduce_func = torch.mean
         elif reduction == "none":
@@ -73,7 +62,7 @@ class DSNELoss(_Loss):
         # Compute distances between all <train, comparison> pairs of vectors
         ft_src_rpt = ft_src.unsqueeze(1).expand(broadcast_size)
         ft_tgt_rpt = ft_tgt.unsqueeze(0).expand(broadcast_size)
-        dists = torch.sum((ft_src_rpt - ft_tgt_rpt)**2, dim=2)
+        dists = 0.5 * torch.sum((ft_src_rpt - ft_tgt_rpt)**2, dim=2)
 
         # Split <source, target> distances into 2 groups:
         #   1. intraclass distances (y_src == y_tgt)
@@ -83,22 +72,10 @@ class DSNELoss(_Loss):
         y_same = torch.eq(y_src_rpt, y_tgt_rpt)   # Boolean mask
         y_diff = torch.logical_not(y_same)        # Boolean mask
         intraclass_dists = dists * y_same   # Set 0 where classes are different
-        interclass_dists = dists * y_diff   # Set 0 where classes are the same
-
-        # Fill 0 values with max to prevent interference with min calculation
-        max_dists = torch.max(dists, dim=1, keepdim=True)[0]
-        max_dists = max_dists.expand(broadcast_size[0:2])
-        interclass_dists = torch.where(y_same, max_dists, interclass_dists)
-
-        # For each training image, find the minimum interclass distance
-        min_interclass_dist = interclass_dists.min(1)[0]
-
-        # For each training image, find the maximum intraclass distance
-        max_intraclass_dist = intraclass_dists.max(1)[0]
+        interclass_dists = torch.maximum(self.margin - (dists * y_diff), torch.tensor(0).to(dists.device))   # Set 0 where classes are the same
 
         # No loss for differences greater than margin (clamp to 0)
-        differences = min_interclass_dist.sub(max_intraclass_dist)
-        loss = torch.abs(differences.sub(self.margin).clamp(max=0))
+        loss = intraclass_dists.sum(dim=1) + interclass_dists.sum(dim=1)
         if self.reduce_func is not None:
             loss = self.reduce_func(loss)
         return loss

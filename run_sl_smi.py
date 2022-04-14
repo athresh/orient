@@ -1,19 +1,19 @@
-from train_sl import TrainClassifier
+from train_sl_siamese import TrainClassifier
 import argparse
 from cords.utils.config_utils import load_config_data
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_toy_da.py")
+    parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_ccsa_office31.py")
     parser.add_argument('--smi_func_type', type=str, default='fl2mi')
-    parser.add_argument('--query_size', type=int, default=100)
+    parser.add_argument('--query_size', type=int, default=62)
     parser.add_argument('--fraction', type=float, default=0.1)
     parser.add_argument('--select_every', type=int, default=20)
-    parser.add_argument('--print_every', type=int, default=10)
+    parser.add_argument('--print_every', type=int, default=1)
     parser.add_argument('--save_every', type=int, default=5)
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--num_epochs', type=int, default=300)
-    parser.add_argument('--source_domains', type=str, default="real")
-    parser.add_argument('--target_domains', type=str, default="clipart")
+    parser.add_argument('--source_domains', type=str, default="amazon")
+    parser.add_argument('--target_domains', type=str, default="dslr")
     parser.add_argument('--similarity_criterion', type=str, default="gradient")
     parser.add_argument('--selection_type', type=str, default="Supervised")
     args = parser.parse_args()

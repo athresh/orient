@@ -64,19 +64,20 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class SiameseResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
-        super(ResNet, self).__init__()
+        super(SiameseResNet, self).__init__()
         self.in_planes = 64
-        self.embDim = 8 * self.in_planes * block.expansion
-
+        self.embDim = 512
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.linear = nn.Linear(512 * block.expansion, num_classes)
+        self.embed1 = nn.Linear(512 * block.expansion, 4096)
+        self.embed2 = nn.Linear(4096, 512)
+        self.linear = nn.Linear(512, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -86,7 +87,7 @@ class ResNet(nn.Module):
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
-    def forward(self, x, last=False, freeze=False):
+    def forward(self, x, last=False, freeze=False, feature=False):
         if freeze:
             with torch.no_grad():
                 out = F.relu(self.bn1(self.conv1(x)))
@@ -96,6 +97,8 @@ class ResNet(nn.Module):
                 out = self.layer4(out)
                 out = F.avg_pool2d(out, 4)
                 e = out.view(out.size(0), -1)
+                e = self.embed1(e)
+                e = self.embed2(e)
         else:
             out = F.relu(self.bn1(self.conv1(x)))
             out = self.layer1(out)
@@ -104,34 +107,42 @@ class ResNet(nn.Module):
             out = self.layer4(out)
             out = F.avg_pool2d(out, 4)
             e = out.view(out.size(0), -1)
+            e = self.embed1(e)
+            e = self.embed2(e)
         out = self.linear(e)
         if last:
-            return out, e
+            if feature:
+                return out, e, e
+            else:
+                return out, e
         else:
-            return out
+            if feature:
+                return out, e
+            else:
+                return out
 
     def get_embedding_dim(self):
         return self.embDim
 
 
-def ResNet18(num_classes=10):
-    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes)
+def SiameseResNet18(num_classes=10):
+    return SiameseResNet(BasicBlock, [2, 2, 2, 2], num_classes)
 
 
-def ResNet34(num_classes=10):
-    return ResNet(BasicBlock, [3, 4, 6, 3], num_classes)
+def SiameseResNet34(num_classes=10):
+    return SiameseResNet(BasicBlock, [3, 4, 6, 3], num_classes)
 
 
-def ResNet50(num_classes=10):
-    return ResNet(Bottleneck, [3, 4, 6, 3], num_classes)
+def SiameseResNet50(num_classes=10):
+    return SiameseResNet(Bottleneck, [3, 4, 6, 3], num_classes)
 
 
-def ResNet101(num_classes=10):
-    return ResNet(Bottleneck, [3, 4, 23, 3], num_classes)
+def SiameseResNet101(num_classes=10):
+    return SiameseResNet(Bottleneck, [3, 4, 23, 3], num_classes)
 
 
-def ResNet152(num_classes=10):
-    return ResNet(Bottleneck, [3, 8, 36, 3], num_classes)
+def SiameseResNet152(num_classes=10):
+    return SiameseResNet(Bottleneck, [3, 8, 36, 3], num_classes)
 
 
 resnet_dict = {'ResNet18': models.resnet18, 'ResNet34': models.resnet34, 'ResNet50': models.resnet50,
@@ -152,7 +163,7 @@ def init_weights(m):
 
 
 class SiameseResNetPretrained(nn.Module):
-    def __init__(self, resnet_name, use_bottleneck=True, bottleneck_dim=256, new_cls=True, class_num=1000):
+    def __init__(self, resnet_name, use_bottleneck=False, bottleneck_dim=256, new_cls=True, class_num=1000):
         super(SiameseResNetPretrained, self).__init__()
         model_resnet = resnet_dict[resnet_name](pretrained=True)
         self.conv1 = model_resnet.conv1
@@ -168,42 +179,61 @@ class SiameseResNetPretrained(nn.Module):
                                             self.layer2, self.layer3, self.layer4, self.avgpool)
         self.use_bottleneck = use_bottleneck
         self.new_cls = new_cls
-        if new_cls:
-            if self.use_bottleneck:
-                self.bottleneck = nn.Linear(model_resnet.fc.in_features, bottleneck_dim)
-                self.fc = nn.Linear(bottleneck_dim, class_num)
-                self.bottleneck.apply(init_weights)
-                self.fc.apply(init_weights)
-                self.__in_features = bottleneck_dim
-            else:
-                self.fc = nn.Linear(model_resnet.fc.in_features, class_num)
-                self.fc.apply(init_weights)
-                self.__in_features = model_resnet.fc.in_features
+        # if new_cls:
+        if self.use_bottleneck:
+            self.embed1 = nn.Linear(model_resnet.fc.in_features, 4096)
+            self.embed2 = nn.Linear(4096, 512)
+            self.bottleneck = nn.Linear(512, bottleneck_dim)
+            self.fc = nn.Linear(bottleneck_dim, class_num)
+            self.embed1.apply(init_weights)
+            self.embed2.apply(init_weights)
+            self.bottleneck.apply(init_weights)
+            self.fc.apply(init_weights)
+            self.__in_features = bottleneck_dim
         else:
-            self.fc = model_resnet.fc
-            self.__in_features = model_resnet.fc.in_features
+            self.embed1 = nn.Linear(model_resnet.fc.in_features, 4096)
+            self.embed2 = nn.Linear(4096, 512)
+            self.embed1.apply(init_weights)
+            self.embed2.apply(init_weights)
+            self.fc = nn.Linear(512, class_num)
+            self.fc.apply(init_weights)
+            self.__in_features = 512
+        # else:
+        #     self.fc = model_resnet.fc
+        #     self.__in_features = model_resnet.fc.in_features
 
     def forward_one(self, x):
         x = self.feature_layers(x)
         x = x.view(x.size(0), -1)
-        if self.use_bottleneck and self.new_cls:
-            x = self.bottleneck(x)
+        x = self.embed1(x)
+        x = self.embed2(x)
         return x
 
-    def forward(self, x1, x2, last=False, freeze=False):
+    def forward(self, x, feature=False, last=False, freeze=False):
         if freeze:
             with torch.no_grad():
-                x1 = self.forward_one(x1)
-                x2 = self.forward_one(x2)
+                embed = self.forward_one(x)
+                if self.use_bottleneck and self.new_cls:
+                    embed1 = self.bottleneck(embed)
         else:
-            x1 = self.forward_one(x1)
-            x2 = self.forward_one(x2)
-        y1 = self.fc(x1)
-        y2 = self.fc(x2)
+            embed = self.forward_one(x)
+            if self.use_bottleneck:
+                embed1 = self.bottleneck(embed)
+        if self.use_bottleneck:
+            y = self.fc(embed1)
+        else:
+            y = self.fc(embed)
+
         if last:
-            return y1, y2, x1, x2
+            if feature:
+                return y, x, embed
+            else:
+                return y, x
         else:
-            return y1, y2
+            if feature:
+                return y, embed
+            else:
+                return y
 
     def output_num(self):
         return self.__in_features
