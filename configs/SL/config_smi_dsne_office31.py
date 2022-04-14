@@ -2,7 +2,7 @@
 
 config = dict(setting="SL",
               dataset=dict(name="office31",
-                           datadir="/home/kk/data/office31",
+                           datadir="/home/kk/data/Office31",
                            feature="dss",
                            type="image",
                            customImageListParams=dict(image_list_folder="/home/kk/data/Office31_list",
