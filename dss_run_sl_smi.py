@@ -1,4 +1,5 @@
 from dss_train_sl import TrainClassifier
+from dss_train_sl_siamese import TrainClassifier as SiameseClassifier
 
 import os
 import argparse
@@ -20,6 +21,8 @@ if __name__=='__main__':
     parser.add_argument('--ckpt_file', type=str, default=None)
     parser.add_argument('--selection_type', type=str, default="Supervised")
     parser.add_argument('--num-runs', type=int, default=1)
+    parser.add_argument('--loss', type=str, default=None,
+                        help="Loss function: can be CrossEntropyLoss, ccsa, or dsne")
     parser.add_argument('--fine_tune', type=bool, default=False)
     parser.add_argument('--augment_queryset', type=bool, default=False)
     args = parser.parse_args()
@@ -32,6 +35,8 @@ if __name__=='__main__':
     config_data.dss_args.fraction = args.fraction
     config_data.dss_args.select_every = args.select_every
     config_data.ckpt.save_every = args.save_every
+    if args.loss:
+        config_data.loss.type = args.loss
     if args.ckpt_file:
         config_data.ckpt.file = args.ckpt_file
         config_data.ckpt.is_load = True
@@ -51,9 +56,18 @@ if __name__=='__main__':
         else:
             config_data.dataset.daParams.source_domains = source_domains
             config_data.dataset.daParams.target_domains = target_domains
+    if config_data.loss.type == 'ccsa':
+        config_data.model.architecture = 'SiameseResNet50'
+        config_data.train_args.alpha = 0.25
+    if config_data.loss.type == 'dsne':
+        config_data.model.architecture = 'SiameseResNet50'
+        config_data.train_args.alpha = 0.1
     for i in range(args.num_runs):
         print(f"RUN: {i}")
         config = config_data.copy()
         config['run_id'] = i
-        classifier = TrainClassifier(config)
+        if config_data.loss.type in ['ccsa', 'dsne']:
+            classifier = SiameseClassifier(config)
+        else:
+            classifier = TrainClassifier(config)
         classifier.train()
