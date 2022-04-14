@@ -9,6 +9,7 @@ __pycache__
 /data/
 /log/
 /RayLogs/
+venv/
 basic.py
 cords/utils/data/datasets/SL/data/conv_shift_clf_2/conv_shift_clf_2.trn
 cords/utils/data/datasets/SL/data/conv_shift_clf_2/conv_shift_clf_2.tst
