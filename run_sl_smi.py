@@ -3,7 +3,7 @@ import argparse
 from cords.utils.config_utils import load_config_data
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_file', type=str, default="configs/SL/config_smi_ccsa_office31.py")
+    parser.add_argument('--config_file', type=str, default="configs/SL/config_full_dsne_office31.py")
     parser.add_argument('--smi_func_type', type=str, default='fl2mi')
     parser.add_argument('--query_size', type=int, default=62)
     parser.add_argument('--fraction', type=float, default=0.1)
