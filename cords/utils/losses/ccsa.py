@@ -2,7 +2,7 @@ import torch
 import torch
 from torch.nn.modules.loss import _Loss, _WeightedLoss
 from torch.nn import CrossEntropyLoss
-
+import torch.nn.functional as F
 
 def euclidean_distance(x1, x2):
     return torch.sqrt(torch.maximum(torch.sum(torch.square(x1 - x2), dim=1, keepdim=False), 1e-08))
@@ -55,27 +55,10 @@ class CCSALoss(_Loss):
         y_tgt : dict of PyTorch Tensors (M)
             Target labels.
         """
-        # If training batch -> (N, F) and comparison batch -> (M, F), then
-        # distances for all combinations of pairs will be of shape (N, M, F)
-        broadcast_size = (ft_src.shape[0], ft_tgt.shape[0], ft_src.shape[1])
-
-        # Compute distances between all <train, comparison> pairs of vectors
-        ft_src_rpt = ft_src.unsqueeze(1).expand(broadcast_size)
-        ft_tgt_rpt = ft_tgt.unsqueeze(0).expand(broadcast_size)
-        dists = 0.5 * torch.sum((ft_src_rpt - ft_tgt_rpt)**2, dim=2)
-
-        # Split <source, target> distances into 2 groups:
-        #   1. intraclass distances (y_src == y_tgt)
-        #   2. interclass distances (y_src != y_tgt)
-        y_src_rpt = y_src.unsqueeze(1).expand(broadcast_size[0:2])
-        y_tgt_rpt = y_tgt.unsqueeze(0).expand(broadcast_size[0:2])
-        y_same = torch.eq(y_src_rpt, y_tgt_rpt)   # Boolean mask
-        y_diff = torch.logical_not(y_same)        # Boolean mask
-        intraclass_dists = dists * y_same   # Set 0 where classes are different
-        interclass_dists = torch.maximum(self.margin - (dists * y_diff), torch.tensor(0).to(dists.device))   # Set 0 where classes are the same
-
-        # No loss for differences greater than margin (clamp to 0)
-        loss = intraclass_dists.sum(dim=1) + interclass_dists.sum(dim=1)
+        dist = F.pairwise_distance(ft_src, ft_tgt, p=2)
+        class_eq = torch.eq(y_src, y_tgt)
+        loss = class_eq * dist.pow(2)
+        loss += (1 - class_eq) * (self.margin - dist).clamp(min=0).pow(2)
         if self.reduce_func is not None:
             loss = self.reduce_func(loss)
         return loss
