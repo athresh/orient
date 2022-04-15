@@ -555,16 +555,16 @@ class TrainClassifier:
                 if len(s_batch) == 3:
                     s_inputs, s_targets, s_weights = s_batch
                     t_inputs, t_targets, t_weights = t_batch
-                    t_inputs = t_inputs[len(s_inputs)]
-                    t_targets = t_targets[len(s_targets)]
-                    t_weights = t_weights[len(s_weights)]
+                    t_inputs = t_inputs[:len(s_inputs)]
+                    t_targets = t_targets[:len(s_targets)]
+                    t_weights = t_weights[:len(s_weights)]
                 elif len(s_batch) == 4:
                     s_inputs, s_targets, s_domains, s_weights = s_batch
                     t_inputs, t_targets, t_domains, t_weights = t_batch
-                    t_inputs = t_inputs[len(s_inputs)]
-                    t_targets = t_targets[len(s_targets)]
-                    t_weights = t_weights[len(s_weights)]
-                    t_domains = t_domains[len(s_domains)]
+                    t_inputs = t_inputs[:len(s_inputs)]
+                    t_targets = t_targets[:len(s_targets)]
+                    t_weights = t_weights[:len(s_weights)]
+                    t_domains = t_domains[:len(s_domains)]
                 else:
                     raise ValueError("Batch length must be either 3 or 4, not {}".format(len(s_batch)))
                 #             for _, (inputs, targets, weights) in enumerate(dataloader):

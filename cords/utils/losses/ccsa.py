@@ -56,7 +56,7 @@ class CCSALoss(_Loss):
             Target labels.
         """
         dist = F.pairwise_distance(ft_src, ft_tgt, p=2)
-        class_eq = torch.eq(y_src, y_tgt)
+        class_eq = torch.eq(y_src, y_tgt).long()
         loss = class_eq * dist.pow(2)
         loss += (1 - class_eq) * (self.margin - dist).clamp(min=0).pow(2)
         if self.reduce_func is not None:
