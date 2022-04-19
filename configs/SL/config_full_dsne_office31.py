@@ -39,15 +39,17 @@ config = dict(setting="SL",
                              weight_decay=5e-4),
 
               scheduler=dict(type="cosine_annealing",
-                             T_max=300),
+                             T_max=1000),
 
 
               dss_args=dict(type="Full",
                             verbose=True),
 
-              train_args=dict(num_epochs=1000,
+              train_args=dict(num_epochs=1005,
+                              ft_epochs=5,
                               device="cuda",
                               alpha=0.1,
+                              train_type="ft",
                               print_every=1,
                               results_dir='results/',
                               print_args=["val_loss", "val_acc", "tst_loss", "tst_acc", "time"],

@@ -538,80 +538,112 @@ class TrainClassifier:
         ################################################# Training Loop #################################################
         """
         wt_valset = WeightedSubset(validset, list(range(len(validset))), [1] * len(validset))
-        for epoch in range(start_epoch, self.cfg.train_args.num_epochs):
+        
+        if self.cfg.train_args.train_type != 'ft':
+            self.cfg.train_args.ft_epochs = 0
+
+        for epoch in range(start_epoch, self.cfg.train_args.num_epochs + self.cfg.train_args.ft_epochs):
             wt_valloader = torch.utils.data.DataLoader(wt_valset,
-                        self.cfg.dataloader.batch_size,
-                        sampler=InfiniteSampler(len(wt_valset), 
-                                len(list(dataloader.batch_sampler)) * self.cfg.dataloader.batch_size))
+                            self.cfg.dataloader.batch_size,
+                            sampler=InfiniteSampler(len(wt_valset), 
+                                    len(list(dataloader.batch_sampler)) * self.cfg.dataloader.batch_size))
+
             subtrn_loss = 0
             subtrn_correct = 0
             subtrn_total = 0
             model.train()
             start_time = time.time()
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                plt.figure()
-            # for _, (inputs, targets, domains, weights) in enumerate(dataloader):
-            for batch_idx, (s_batch, t_batch) in enumerate(zip(dataloader, wt_valloader)):
-                if len(s_batch) == 3:
-                    s_inputs, s_targets, s_weights = s_batch
-                    t_inputs, t_targets, t_weights = t_batch
-                    t_inputs = t_inputs[:len(s_inputs)]
-                    t_targets = t_targets[:len(s_targets)]
-                    t_weights = t_weights[:len(s_weights)]
-                elif len(s_batch) == 4:
-                    s_inputs, s_targets, s_domains, s_weights = s_batch
-                    t_inputs, t_targets, t_domains, t_weights = t_batch
-                    t_inputs = t_inputs[:len(s_inputs)]
-                    t_targets = t_targets[:len(s_targets)]
-                    t_weights = t_weights[:len(s_weights)]
-                    t_domains = t_domains[:len(s_domains)]
-                else:
-                    raise ValueError("Batch length must be either 3 or 4, not {}".format(len(s_batch)))
-                #             for _, (inputs, targets, weights) in enumerate(dataloader):
-                # Move source data to cuda device
-                s_inputs = s_inputs.to(self.cfg.train_args.device)
-                s_targets = s_targets.to(self.cfg.train_args.device, non_blocking=True)
-                s_weights = s_weights.to(self.cfg.train_args.device)
-                # Move target data to cuda device
-                t_inputs = t_inputs.to(self.cfg.train_args.device)
-                t_targets = t_targets.to(self.cfg.train_args.device, non_blocking=True)
-                t_weights = t_weights.to(self.cfg.train_args.device)
+            
+            if epoch < self.cfg.train_args.num_epochs:
+                for batch_idx, (s_batch, t_batch) in enumerate(zip(dataloader, wt_valloader)):
+                    if len(s_batch) == 3:
+                        src_inputs, src_targets, src_weights = s_batch
+                        tgt_inputs, tgt_targets, tgt_weights = t_batch
+                        tgt_inputs = tgt_inputs[:len(src_inputs)]
+                        tgt_targets = tgt_targets[:len(src_targets)]
+                        tgt_weights = tgt_weights[:len(src_weights)]
+                    elif len(s_batch) == 4:
+                        src_inputs, src_targets, src_domains, src_weights = s_batch
+                        tgt_inputs, tgt_targets, tgt_domains, tgt_weights = t_batch
+                        tgt_inputs = tgt_inputs[:len(src_inputs)]
+                        tgt_targets = tgt_targets[:len(src_targets)]
+                        tgt_weights = tgt_weights[:len(src_weights)]
+                        tgt_domains = tgt_domains[:len(src_domains)]
+                    else:
+                        raise ValueError("Batch length must be either 3 or 4, not {}".format(len(s_batch)))
+                    #             for _, (inputs, targets, weights) in enumerate(dataloader):
+                    # Move source data to cuda device
+                    src_inputs = src_inputs.to(self.cfg.train_args.device)
+                    src_targets = src_targets.to(self.cfg.train_args.device, non_blocking=True)
+                    src_weights = src_weights.to(self.cfg.train_args.device)
+                    # Move target data to cuda device
+                    tgt_inputs = tgt_inputs.to(self.cfg.train_args.device)
+                    tgt_targets = tgt_targets.to(self.cfg.train_args.device, non_blocking=True)
+                    tgt_weights = tgt_weights.to(self.cfg.train_args.device)
 
-                all_data = torch.cat([s_inputs, t_inputs], 0)
-                all_targets = torch.cat([s_targets, t_targets], 0)
-                all_weights = torch.cat([s_weights, t_weights], 0)
-                optimizer.zero_grad()
+                    all_data = torch.cat([src_inputs, tgt_inputs], 0)
+                    all_targets = torch.cat([src_targets, tgt_targets], 0)
+                    all_weights = torch.cat([src_weights, tgt_weights], 0)
+                    optimizer.zero_grad()
 
-                all_logits, all_embeds = model(all_data, feature=True)
-                src_embeds = all_embeds[:s_inputs.shape[0]]
-                tgt_embeds = all_embeds[s_inputs.shape[0]:]
-                xent_losses = criterion_nored(all_logits, all_targets)
-                xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
-                pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, s_targets, t_targets)
-                pair_loss = torch.dot(pair_losses, s_weights / (s_weights.sum()))
-                loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
-                loss.backward()
-                subtrn_loss += loss.item()
-                optimizer.step()
-                _, predicted = all_logits.max(1)
-                subtrn_total += all_targets.size(0)
-                subtrn_correct += predicted.eq(all_targets).sum().item()
-                if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                    plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c=targets.cpu().numpy(),
-                                s=25, edgecolor='k')
-                # if self.cfg.dataset.name in ["toy_da"]:
-                #     for idx in range(len(inputs.cpu().numpy()[:,0])):
-                #         if inputs.cpu().numpy()[idx, 0] ==
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
-                plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
-                if self.cfg.dataset.name == 'toy_da3':
-                    plt.xlim(-2.0, 5.0)
-                    plt.ylim(-1.0, 2.0)
-                else:
-                    plt.xlim(-2.0, 2.5)
-                    plt.ylim(-1.0, 2.0)
-                plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
-                # HK: For unsupervised add psuedo labels to valdataloader.
+                    all_logits, all_embeds = model(all_data, feature=True)
+                    src_embeds = all_embeds[:src_inputs.shape[0]]
+                    tgt_embeds = all_embeds[src_inputs.shape[0]:]
+                    src_logits = all_logits[:src_inputs.shape[0]]
+                    # tgt_logits = all_logits[src_inputs.shape[0]:]
+
+                    if self.cfg.train_args.train_type == 'ft':
+                        xent_losses = criterion_nored(src_logits, src_targets)
+                        xent_loss = torch.dot(xent_losses, src_weights / (src_weights.sum()))
+                    else:
+                        xent_losses = criterion_nored(all_logits, all_targets)
+                    xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
+                    
+                    pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, src_targets, tgt_targets)
+                    pair_loss = torch.dot(pair_losses, src_weights / (src_weights.sum()))
+                    
+                    loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
+                    loss.backward()
+                    optimizer.step()
+
+                    subtrn_loss += loss.item()
+                    
+                    if self.cfg.train_args.train_type == 'ft':
+                        _, predicted = src_logits.max(1)
+                        subtrn_total += src_targets.size(0)
+                        subtrn_correct += predicted.eq(src_targets).sum().item()
+                    else:
+                        _, predicted = all_logits.max(1)
+                        subtrn_total += all_targets.size(0)
+                        subtrn_correct += predicted.eq(all_targets).sum().item()
+
+            else:
+
+                for batch_idx, t_batch in enumerate(wt_valloader):
+                    if len(t_batch) == 3:
+                        tgt_inputs, tgt_targets, tgt_weights = t_batch
+                    elif len(t_batch) == 4:
+                        tgt_inputs, tgt_targets, tgt_domains, tgt_weights = t_batch
+                    else:
+                        raise ValueError("Batch length must be either 3 or 4, not {}".format(len(t_batch)))
+                    
+                    # Move target data to cuda device
+                    tgt_inputs = tgt_inputs.to(self.cfg.train_args.device)
+                    tgt_targets = tgt_targets.to(self.cfg.train_args.device, non_blocking=True)
+                    tgt_weights = tgt_weights.to(self.cfg.train_args.device)
+                    
+                    optimizer.zero_grad()
+                    tgt_logits = model(tgt_inputs)
+                    xent_losses = criterion_nored(tgt_logits, tgt_targets)
+                    xent_loss = torch.dot(xent_losses, tgt_weights / (tgt_weights.sum()))
+                    xent_loss.backward()
+                    optimizer.step()
+
+                    subtrn_loss += xent_loss.item()
+                    _, predicted = tgt_logits.max(1)
+                    subtrn_total += tgt_targets.size(0)
+                    subtrn_correct += predicted.eq(tgt_targets).sum().item()
+
             epoch_time = time.time() - start_time
             scheduler.step()
             timing.append(epoch_time)
@@ -748,6 +780,7 @@ class TrainClassifier:
                             tst_pred.append(detach_and_clone(predicted))
                             tst_true.append(detach_and_clone(targets))
                             tst_metadata.append(detach_and_clone(domains))
+
                         val_pred = collate_list(move_to(val_pred, torch.device('cpu')))
                         val_true = collate_list(move_to(val_true, torch.device('cpu')))
                         val_metadata = collate_list(move_to(val_metadata, torch.device('cpu')))
@@ -762,8 +795,6 @@ class TrainClassifier:
                             logger.info("val_metadata on device: " + str(val_metadata.get_device()))
                         results_val, results_str_val = validset.eval(val_pred, val_true, val_metadata)
                         results_tst, results_str_tst = testset.eval(tst_pred, tst_true, tst_metadata)
-                #                         results_val, results_str_val = self.eval_group(validset, val_pred, val_true, val_metadata)
-                #                         results_tst, results_str_test = self.eval_group(testset, tst_pred, tst_true, tst_metadata)
 
                 if "subtrn_acc" in print_args:
                     subtrn_acc.append(subtrn_correct / subtrn_total)
