@@ -39,13 +39,13 @@ config = dict(setting="SL",
                              weight_decay=5e-4),
 
               scheduler=dict(type="cosine_annealing",
-                             T_max=1000),
+                             T_max=1005),
 
 
               dss_args=dict(type="Full",
                             verbose=True),
 
-              train_args=dict(num_epochs=1005,
+              train_args=dict(num_epochs=1000,
                               ft_epochs=5,
                               device="cuda",
                               alpha=0.1,
