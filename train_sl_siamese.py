@@ -597,7 +597,7 @@ class TrainClassifier:
                         xent_loss = torch.dot(xent_losses, src_weights / (src_weights.sum()))
                     else:
                         xent_losses = criterion_nored(all_logits, all_targets)
-                    xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
+                        xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
                     
                     pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, src_targets, tgt_targets)
                     pair_loss = torch.dot(pair_losses, src_weights / (src_weights.sum()))
