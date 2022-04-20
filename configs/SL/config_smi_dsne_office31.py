@@ -15,7 +15,7 @@ config = dict(setting="SL",
                                            normalizer_std=[0.229, 0.224, 0.225]),),
 
               dataloader=dict(shuffle=True,
-                              batch_size=16,
+                              batch_size=20,
                               pin_memory=True),
 
 
@@ -38,7 +38,7 @@ config = dict(setting="SL",
                              weight_decay=5e-4),
 
               scheduler=dict(type="cosine_annealing",
-                             T_max=300),
+                             T_max=1005),
 
               dss_args=dict(type="SMI",
                             fraction=0.1,
@@ -58,7 +58,9 @@ config = dict(setting="SL",
                             query_size=62,
                             verbose=True),
 
-              train_args=dict(num_epochs=300,
+              train_args=dict(num_epochs=1000,
+                              ft_epochs=5,
+                              train_type='ft',
                               device="cuda",
                               alpha=0.1,
                               print_every=1,
