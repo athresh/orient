@@ -608,6 +608,22 @@ class TrainClassifier:
 
                     subtrn_loss += loss.item()
                     
+                    if (self.cfg.loss.type == 'dsne') and (self.cfg.train_args.train_type == 'ft'):
+                        optimizer.zero_grad()
+                        all_logits, all_embeds = model(all_data, feature=True)
+                        src_embeds = all_embeds[:src_inputs.shape[0]]
+                        tgt_embeds = all_embeds[src_inputs.shape[0]:]
+                        src_logits = all_logits[:src_inputs.shape[0]]
+                        tgt_logits = all_logits[src_inputs.shape[0]:]
+                        xent_losses = criterion_nored(tgt_logits, tgt_targets)
+                        xent_loss = torch.dot(xent_losses, tgt_weights / (tgt_weights.sum()))
+                        pair_losses = pairedcriterion_nored(tgt_embeds, src_embeds, tgt_targets, src_targets)
+                        pair_loss = torch.dot(pair_losses, tgt_weights / (tgt_weights.sum()))
+                        loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
+                        loss.backward()
+                        optimizer.step()
+
+                    
                     if self.cfg.train_args.train_type == 'ft':
                         _, predicted = src_logits.max(1)
                         subtrn_total += src_targets.size(0)

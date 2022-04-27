@@ -38,7 +38,7 @@ config = dict(setting="SL",
                              weight_decay=5e-4),
 
               scheduler=dict(type="cosine_annealing",
-                             T_max=1005),
+                             T_max=305),
 
               dss_args=dict(type="SMI",
                             fraction=0.1,
@@ -58,7 +58,7 @@ config = dict(setting="SL",
                             query_size=62,
                             verbose=True),
 
-              train_args=dict(num_epochs=1000,
+              train_args=dict(num_epochs=300,
                               ft_epochs=5,
                               train_type='ft',
                               device="cuda",
