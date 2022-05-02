@@ -276,6 +276,33 @@ class TrainClassifier:
         if self.cfg.scheduler.type == 'cosine_annealing':
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                                    T_max=self.cfg.scheduler.T_max)
+        elif self.cfg.scheduler.type == 'step_lr':
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
+                                                        step_size=self.cfg.scheduler.step_size,
+                                                        gamma=self.cfg.scheduler.gamma)
+        elif self.cfg.scheduler.type == 'multi_step':
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
+                                                             milestones=self.cfg.scheduler.milestones,
+                                                             gamma=self.cfg.scheduler.gamma)
+        elif self.cfg.scheduler.type == 'exponential':
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,
+                                                               gamma=self.cfg.scheduler.gamma)
+        elif self.cfg.scheduler.type == 'reduce_lr_on_plateau':
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                                   factor=self.cfg.scheduler.factor,
+                                                                   patience=self.cfg.scheduler.patience,
+                                                                   verbose=self.cfg.scheduler.verbose,
+                                                                   threshold=self.cfg.scheduler.threshold,
+                                                                   threshold_mode=self.cfg.scheduler.threshold_mode,
+                                                                   cooldown=self.cfg.scheduler.cooldown,
+                                                                   min_lr=self.cfg.scheduler.min_lr)
+        elif self.cfg.scheduler.type == 'cosine_annealing_warm_restarts':
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
+                                                                             T_0=self.cfg.scheduler.T_0,
+                                                                             T_mult=self.cfg.scheduler.T_mult,
+                                                                             eta_min=self.cfg.scheduler.eta_min)
+        else:
+            scheduler = None
         return optimizer, scheduler
 
     @staticmethod
@@ -584,8 +611,8 @@ class TrainClassifier:
                     all_data = torch.cat([src_inputs, tgt_inputs], 0)
                     all_targets = torch.cat([src_targets, tgt_targets], 0)
                     all_weights = torch.cat([src_weights, tgt_weights], 0)
+                    
                     optimizer.zero_grad()
-
                     all_logits, all_embeds = model(all_data, feature=True)
                     src_embeds = all_embeds[:src_inputs.shape[0]]
                     tgt_embeds = all_embeds[src_inputs.shape[0]:]
@@ -593,28 +620,24 @@ class TrainClassifier:
                     # tgt_logits = all_logits[src_inputs.shape[0]:]
 
                     if self.cfg.train_args.train_type == 'ft':
+                        
+                        #Train on Source Domain First
                         xent_losses = criterion_nored(src_logits, src_targets)
                         xent_loss = torch.dot(xent_losses, src_weights / (src_weights.sum()))
-                    else:
-                        xent_losses = criterion_nored(all_logits, all_targets)
-                        xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
-                    
-                    pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, src_targets, tgt_targets)
-                    pair_loss = torch.dot(pair_losses, src_weights / (src_weights.sum()))
-                    
-                    loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
-                    loss.backward()
-                    optimizer.step()
+                        pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, src_targets, tgt_targets)
+                        pair_loss = torch.dot(pair_losses, src_weights / (src_weights.sum()))
+                        loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
+                        loss.backward()
+                        optimizer.step()
 
-                    subtrn_loss += loss.item()
-                    
-                    if (self.cfg.loss.type == 'dsne') and (self.cfg.train_args.train_type == 'ft'):
+                        #Train on Target Domain Second
                         optimizer.zero_grad()
                         all_logits, all_embeds = model(all_data, feature=True)
                         src_embeds = all_embeds[:src_inputs.shape[0]]
                         tgt_embeds = all_embeds[src_inputs.shape[0]:]
                         src_logits = all_logits[:src_inputs.shape[0]]
                         tgt_logits = all_logits[src_inputs.shape[0]:]
+                        
                         xent_losses = criterion_nored(tgt_logits, tgt_targets)
                         xent_loss = torch.dot(xent_losses, tgt_weights / (tgt_weights.sum()))
                         pair_losses = pairedcriterion_nored(tgt_embeds, src_embeds, tgt_targets, src_targets)
@@ -622,7 +645,18 @@ class TrainClassifier:
                         loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
                         loss.backward()
                         optimizer.step()
+                    else:
+                        xent_losses = criterion_nored(all_logits, all_targets)
+                        xent_loss = torch.dot(xent_losses, all_weights / (all_weights.sum()))
+                        pair_losses = pairedcriterion_nored(src_embeds, tgt_embeds, src_targets, tgt_targets)
+                        pair_loss = torch.dot(pair_losses, src_weights / (src_weights.sum()))    
+                        loss = (1-self.cfg.train_args.alpha) * xent_loss + self.cfg.train_args.alpha * pair_loss
+                        loss.backward()
+                        optimizer.step()
 
+                    subtrn_loss += loss.item()
+                    
+                    
                     
                     if self.cfg.train_args.train_type == 'ft':
                         _, predicted = src_logits.max(1)
@@ -661,7 +695,8 @@ class TrainClassifier:
                     subtrn_correct += predicted.eq(tgt_targets).sum().item()
 
             epoch_time = time.time() - start_time
-            scheduler.step()
+            if scheduler is not None:
+                scheduler.step()
             timing.append(epoch_time)
             print_args = self.cfg.train_args.print_args
 
