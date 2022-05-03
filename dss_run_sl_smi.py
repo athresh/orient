@@ -25,6 +25,7 @@ if __name__=='__main__':
                         help="Loss function: can be CrossEntropyLoss, ccsa, or dsne")
     parser.add_argument('--fine_tune', type=bool, default=False)
     parser.add_argument('--augment_queryset', type=bool, default=False)
+    parser.add_argument('--just-plot', default=False, action='store_true')
     args = parser.parse_args()
     config_file = args.config_file
     config_data = load_config_data(args.config_file)
@@ -45,6 +46,7 @@ if __name__=='__main__':
     config_data.train_args.num_epochs = args.num_epochs
     config_data.dss_args.similarity_criterion = args.similarity_criterion
     config_data.dss_args.selection_type = args.selection_type
+    config_data.train_args.just_plot = args.just_plot
     if config_data.dataset.name in ["domainnet", "toy_da", "toy_da2", "office31", "officehome", "toy_da3"]:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")

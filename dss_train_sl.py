@@ -446,6 +446,55 @@ class TrainClassifier:
                     subtrn_acc = load_metrics['subtrn_acc']
                 if arg == "time":
                     timing = load_metrics['time']
+            if self.cfg.train_args.just_plot:
+                # Add t-SNE plots
+                X = []
+                y = []
+                for batch_idx, batch in enumerate(trainloader):
+                    if len(batch) == 3:
+                        inputs, targets, weights = batch
+                    elif len(batch) == 4:
+                        inputs, targets, domains, weights = batch
+                    else:
+                        raise ValueError("Batch length must be either 3 or 4, not {}".format(len(batch)))
+                    inputs = inputs.to(self.cfg.train_args.device)
+                    targets = targets.to(self.cfg.train_args.device, non_blocking=True)
+                    outputs, last_X = model(inputs, last=True,freeze=True)
+                    X += last_X
+                    y += targets
+                X = torch.stack(X, dim=0).cpu().numpy()
+                y = torch.stack(y, dim=0).cpu().numpy()
+
+                subset_X = []
+                subset_y = []
+                for batch_idx, batch in enumerate(dataloader):
+                    if len(batch) == 3:
+                        inputs, targets, weights = batch
+                    elif len(batch) == 4:
+                        inputs, targets, domains, weights = batch
+                    else:
+                        raise ValueError("Batch length must be either 3 or 4, not {}".format(len(batch)))
+                    inputs = inputs.to(self.cfg.train_args.device)
+                    targets = targets.to(self.cfg.train_args.device, non_blocking=True)
+                    outputs, last_X = model(inputs, last=True,freeze=True)
+                    subset_X += last_X
+                    subset_y += targets
+                subset_X = torch.stack(subset_X, dim=0).cpu().numpy()
+                subset_y = torch.stack(subset_y, dim=0).cpu().numpy()
+
+                from tsnecuda import TSNE
+
+                input =np.vstack((X, subset_X))
+                tsne = TSNE(perplexity=64.0, learning_rate=270)
+                embedded = tsne.fit_transform(input)
+                N = len(X)
+                k = np.ones(subset_y.shape)
+                import matplotlib.pyplot as plt
+                p = np.hstack((y, k*31))
+                scatter = plt.scatter(embedded[:N,0],embedded[:N,1], c=y, alpha=0.5, s=5)
+                scatter = plt.scatter(embedded[N:,0],embedded[N:,1], c=subset_y, alpha=0.8,  s=70)
+                plt.savefig(checkpoint_path.replace("model.pt", "tsne.png"))
+                return
         else:
             start_epoch = 0
 
@@ -712,5 +761,5 @@ class TrainClassifier:
                 }
 
                 # save checkpoint
-                self.save_ckpt(ckpt_state, logger.get_snapshot_dir() + f"/model_{epoch + 1}.pt")
+                self.save_ckpt(ckpt_state, logger.get_snapshot_dir() + "/model.pt")
                 logger.info("Model checkpoint saved at epoch: {0:d}".format(epoch + 1))
