@@ -65,12 +65,12 @@ if __name__=='__main__':
         config = config_data.copy()
         config['run_id'] = i
         if config_data.loss.type in ['ccsa', 'dsne']:
-            config_data.dss_args.augment_queryset = False
-            config_data.train_args.train_type = 'ft' if args.fine_tune else ''
-            config_data.train_args.ft_epochs = 5 if args.fine_tune else 0
+            config.dss_args.augment_queryset = False
+            config.train_args.train_type = 'ft' if args.fine_tune else ''
+            config.train_args.ft_epochs = 5 if args.fine_tune else 0
             classifier = SiameseClassifier(config)
         else:
-            config_data.dss_args.fine_tune = args.fine_tune
-            config_data.dss_args.augment_queryset = args.augment_queryset
+            config.dss_args.fine_tune = args.fine_tune
+            config.dss_args.augment_queryset = args.augment_queryset
             classifier = TrainClassifier(config)
         classifier.train()
