@@ -357,7 +357,7 @@ class TrainClassifier:
 
         trn_batch_size = self.cfg.dataloader.batch_size
         val_batch_size = self.cfg.dataloader.batch_size
-        tst_batch_size = 1000
+        tst_batch_size = self.cfg.dataloader.batch_size
 
         # Creating the Data Loaders
         if self.cfg.dataset.name in ['civilcomments']:
