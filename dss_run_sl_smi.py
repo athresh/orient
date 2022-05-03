@@ -45,8 +45,6 @@ if __name__=='__main__':
     config_data.train_args.num_epochs = args.num_epochs
     config_data.dss_args.similarity_criterion = args.similarity_criterion
     config_data.dss_args.selection_type = args.selection_type
-    config_data.dss_args.fine_tune = args.fine_tune
-    config_data.dss_args.augment_queryset = args.augment_queryset
     if config_data.dataset.name in ["domainnet", "toy_da", "toy_da2", "office31", "officehome", "toy_da3"]:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")
@@ -67,7 +65,12 @@ if __name__=='__main__':
         config = config_data.copy()
         config['run_id'] = i
         if config_data.loss.type in ['ccsa', 'dsne']:
+            config.dss_args.augment_queryset = False
+            config.train_args.train_type = 'ft' if args.fine_tune else ''
+            config.train_args.ft_epochs = 5 if args.fine_tune else 0
             classifier = SiameseClassifier(config)
         else:
+            config.dss_args.fine_tune = args.fine_tune
+            config.dss_args.augment_queryset = args.augment_queryset
             classifier = TrainClassifier(config)
         classifier.train()
