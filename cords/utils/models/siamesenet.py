@@ -226,9 +226,15 @@ class SiameseResNetPretrained(nn.Module):
 
         if last:
             if feature:
-                return y, x, embed
+                if self.use_bottleneck:
+                    return y, embed1, embed
+                else:
+                    return y, embed, embed
             else:
-                return y, x
+                if self.use_bottleneck:
+                    return y, embed1
+                else:
+                    return y, embed
         else:
             if feature:
                 return y, embed
