@@ -485,12 +485,21 @@ class TrainClassifier:
                 from tsnecuda import TSNE
 
                 input =np.vstack((X, subset_X))
+                labels = np.hstack((y,subset_y))
                 tsne = TSNE(perplexity=64.0, learning_rate=270)
                 embedded = tsne.fit_transform(input)
+                embedding_array = np.insert(embedded, 2, labels, axis=1)
+                
                 N = len(X)
                 k = np.ones(subset_y.shape)
+                j = np.zeros(y.shape)
+                embedding_array = np.insert(embedding_array, 3, np.hstack((j,k)), axis=1)
+                np.savetxt(checkpoint_path.replace("model.pt", "tsne_embedding.csv"),
+                           embedding_array, delimiter=',',           
+                           header="embedding_0,embedding_1,label,selected",
+                           fmt=['%1.10e','%1.10e',"%d","%d"]) 
                 import matplotlib.pyplot as plt
-                p = np.hstack((y, k*31))
+                
                 scatter = plt.scatter(embedded[:N,0],embedded[:N,1], c=y, alpha=0.5, s=5)
                 scatter = plt.scatter(embedded[N:,0],embedded[N:,1], c=subset_y, alpha=0.8,  s=70)
                 plt.savefig(checkpoint_path.replace("model.pt", "tsne.png"))
