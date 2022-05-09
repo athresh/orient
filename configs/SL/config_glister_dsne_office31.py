@@ -1,7 +1,4 @@
 # Learning setting
-from asyncio import FIRST_EXCEPTION
-
-
 config = dict(setting="SL",
 
               dataset=dict(name="office31",
