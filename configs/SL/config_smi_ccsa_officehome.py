@@ -1,6 +1,7 @@
 # Learning setting
 
 config = dict(setting="SL",
+
               dataset=dict(name="officehome",
                            datadir="../data/Officehome",
                            feature="dss",
@@ -15,11 +16,11 @@ config = dict(setting="SL",
                                            normalizer_std=[0.229, 0.224, 0.225]),),
 
               dataloader=dict(shuffle=True,
-                              batch_size=16,
+                              batch_size=20,
                               pin_memory=True),
 
 
-              model=dict(architecture='ResNet50',
+              model=dict(architecture='SiameseResNet50',
                          type='pre-defined',
                          numclasses=65,
                          pretrained=True),
@@ -29,23 +30,40 @@ config = dict(setting="SL",
                         dir='results/Officehome/',
                         save_every=20),
 
-              loss=dict(type='CrossEntropyLoss',
+              loss=dict(type='ccsa',
                         use_sigmoid=False),
 
               optimizer=dict(type="sgd",
                              momentum=0.9,
                              lr=0.001,
-                             weight_decay=5e-4),
+                             weight_decay=1e-4),
 
-              scheduler=dict(type="cosine_annealing",
-                             T_max=300),
+              scheduler=dict(type="none",
+                             T_max=305),
 
-              dss_args=dict(type="Full",
+              dss_args=dict(type="SMI",
+                            fraction=0.1,
+                            select_every=20,
+                            query_size=100,
+                            kappa=0,
+                            linear_layer=False,
+                            selection_type='Supervised',
+                            smi_func_type='fl2mi',
+                            valid=True,
+                            optimizer='NaiveGreedy',
+                            similarity_criterion='gradient',
+                            metric='cosine',
+                            eta=1,
+                            stopIfZeroGain=False,
+                            stopIfNegativeGain=False,
                             verbose=True),
 
               train_args=dict(num_epochs=300,
+                              ft_epochs=5,
+                              train_type='ft',
                               device="cuda",
-                              print_every=10,
+                              alpha=0.25,
+                              print_every=1,
                               results_dir='results/',
                               print_args=["val_loss", "val_acc", "tst_loss", "tst_acc", "time"],
                               return_args=[]
