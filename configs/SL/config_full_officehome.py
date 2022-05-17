@@ -1,7 +1,6 @@
 # Learning setting
 
 config = dict(setting="SL",
-
               dataset=dict(name="officehome",
                            datadir="../data/Officehome",
                            feature="dss",
