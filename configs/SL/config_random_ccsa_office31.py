@@ -1,6 +1,7 @@
 # Learning setting
 
 config = dict(setting="SL",
+
               dataset=dict(name="office31",
                            datadir="../data/Office31",
                            feature="dss",
@@ -40,21 +41,10 @@ config = dict(setting="SL",
               scheduler=dict(type="none",
                              T_max=305),
 
-              dss_args=dict(type="SMI",
+              dss_args=dict(type="Random",
                             fraction=0.1,
                             select_every=20,
-                            query_size=100,
                             kappa=0,
-                            linear_layer=False,
-                            selection_type='Supervised',
-                            smi_func_type='fl2mi',
-                            valid=True,
-                            optimizer='NaiveGreedy',
-                            similarity_criterion='gradient',
-                            metric='cosine',
-                            eta=1,
-                            stopIfZeroGain=False,
-                            stopIfNegativeGain=False,
                             verbose=True),
 
               train_args=dict(num_epochs=300,
