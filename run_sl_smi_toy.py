@@ -1,4 +1,4 @@
-from train_sl_siamese import TrainClassifier
+from train_sl import TrainClassifier
 import argparse
 from cords.utils.config_utils import load_config_data
 if __name__=='__main__':
