@@ -566,8 +566,8 @@ class TrainClassifier:
                     plt.xlim(-2.0, 5.0)
                     plt.ylim(-1.0, 2.0)
                 else:
-                    plt.xlim(-2.0, 2.5)
-                    plt.ylim(-1.0, 2.0)
+                    plt.xlim(-4.0, 6.0)
+                    plt.ylim(-8.0, 5.0)
                 plt.savefig(self.all_plots_dir + "/selected_data_{}.png".format(epoch))
                 # HK: For unsupervised add psuedo labels to valdataloader.
             epoch_time = time.time() - start_time
