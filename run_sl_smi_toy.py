@@ -10,7 +10,7 @@ if __name__=='__main__':
     parser.add_argument('--select_every', type=int, default=5)
     parser.add_argument('--print_every', type=int, default=1)
     parser.add_argument('--save_every', type=int, default=5)
-    parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--num_epochs', type=int, default=40)
     parser.add_argument('--source_domains', type=str, default="d0")
     parser.add_argument('--target_domains', type=str, default="d1")
