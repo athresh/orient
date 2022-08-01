@@ -27,8 +27,6 @@ if __name__=='__main__':
     config_data.train_args.device = args.device
     config_data.train_args.print_every = args.print_every
     config_data.train_args.num_epochs = args.num_epochs
-    config_data.dss_args.similarity_criterion = args.similarity_criterion
-    config_data.dss_args.selection_type = args.selection_type
     if config_data.dataset.name in ["domainnet", "toy_da", "toy_da2", "office31", "officehome", "toy_da3", "toy_da5"]:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")
