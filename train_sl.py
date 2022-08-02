@@ -530,7 +530,7 @@ class TrainClassifier:
             subtrn_total = 0
             model.train()
             start_time = time.time()
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+            if self.cfg.train_args.visualize and ((epoch + 1) % self.cfg.dss_args.select_every == 0 or epoch == 0):
                 plt.figure()
             # for _, (inputs, targets, domains, weights) in enumerate(dataloader):
             for batch_idx, batch in enumerate(dataloader):
@@ -554,13 +554,13 @@ class TrainClassifier:
                 _, predicted = outputs.max(1)
                 subtrn_total += targets.size(0)
                 subtrn_correct += predicted.eq(targets).sum().item()
-                if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+                if self.cfg.train_args.visualize and ((epoch + 1) % self.cfg.dss_args.select_every == 0 or epoch == 0):
                     plt.scatter(inputs.cpu().numpy()[:, 0], inputs.cpu().numpy()[:, 1], marker='o', c=targets.cpu().numpy(),
                                 s=25, edgecolor='k')
                 # if self.cfg.dataset.name in ["toy_da"]:
                 #     for idx in range(len(inputs.cpu().numpy()[:,0])):
                 #         if inputs.cpu().numpy()[idx, 0] ==
-            if self.cfg.train_args.visualize and (epoch + 1) % self.cfg.dss_args.select_every == 0:
+            if self.cfg.train_args.visualize and ((epoch + 1) % self.cfg.dss_args.select_every == 0 or epoch == 0):
                 plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
                 if self.cfg.dataset.name == 'toy_da3':
                     plt.xlim(-2.0, 5.0)
