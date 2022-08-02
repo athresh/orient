@@ -27,7 +27,7 @@ if __name__=='__main__':
     config_data.train_args.device = args.device
     config_data.train_args.print_every = args.print_every
     config_data.train_args.num_epochs = args.num_epochs
-    if config_data.dataset.name in ["domainnet", "toy_da", "toy_da2", "office31", "officehome", "toy_da3", "toy_da5"]:
+    if config_data.dataset.name in ["domainnet", "office31", "officehome"] or "toy" in config_data.dataset.name:
         source_domains = args.source_domains.split(",")
         target_domains = args.target_domains.split(",")
         if config_data.dataset.name in ["domainnet", "office31", "officehome"]:

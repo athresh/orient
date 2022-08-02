@@ -32,3 +32,4 @@ examples/SL/image_classification/smi_toy.py
 *.trn
 *.val
 *.out
+office31_scatter_legend.png
