@@ -353,24 +353,24 @@ class TrainClassifier:
 
         # Checkpoint file
         checkpoint_dir = osp.abspath(osp.expanduser(self.cfg.ckpt.dir))
-        if self.cfg.dss_args.type == 'SMI':
-            ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
-                                        self.cfg.dss_args.type,
-                                        self.cfg.dataset.name,
-                                        self.da_dir_extension,
-                                        self.cfg.dss_args.selection_type,
-                                        self.cfg.dss_args.smi_func_type,
-                                        self.cfg.dss_args.similarity_criterion,
-                                        str(self.cfg.dss_args.fraction),
-                                        str(self.cfg.dss_args.select_every))
-        else:
-            ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
-                                        self.cfg.dss_args.type,
-                                        self.cfg.dataset.name,
-                                        self.da_dir_extension,
-                                        self.cfg.dss_args.similarity_criterion,
-                                        str(self.cfg.dss_args.fraction),
-                                        str(self.cfg.dss_args.select_every))
+        # if self.cfg.dss_args.type == 'SMI':
+        ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+                                    self.cfg.dss_args.type,
+                                    self.cfg.dataset.name,
+                                    self.da_dir_extension,
+                                    self.cfg.dss_args.selection_type,
+                                    self.cfg.dss_args.smi_func_type,
+                                    self.cfg.dss_args.similarity_criterion,
+                                    str(self.cfg.dss_args.fraction),
+                                    str(self.cfg.dss_args.select_every))
+        # else:
+        #     ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
+        #                                 self.cfg.dss_args.type,
+        #                                 self.cfg.dataset.name,
+        #                                 self.da_dir_extension,
+        #                                 self.cfg.dss_args.similarity_criterion,
+        #                                 str(self.cfg.dss_args.fraction),
+        #                                 str(self.cfg.dss_args.select_every))
         # ckpt_dir = os.path.join(checkpoint_dir, self.cfg.setting,
         #                         self.cfg.dss_args.type,
         #                         self.cfg.dataset.name,
