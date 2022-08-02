@@ -561,7 +561,7 @@ class TrainClassifier:
                 #     for idx in range(len(inputs.cpu().numpy()[:,0])):
                 #         if inputs.cpu().numpy()[idx, 0] ==
             if self.cfg.train_args.visualize and ((epoch + 1) % self.cfg.dss_args.select_every == 0 or epoch == 0):
-                plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
+                # plt.title("Strategy: {}({}), Fraction: {}".format(self.cfg.dss_args.type, self.cfg.dss_args.smi_func_type, self.cfg.dss_args.fraction))
                 if self.cfg.dataset.name == 'toy_da3':
                     plt.xlim(-2.0, 5.0)
                     plt.ylim(-1.0, 2.0)
