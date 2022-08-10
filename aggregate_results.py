@@ -75,7 +75,7 @@ def get_plot_instruction(
         else:
             if len(group_keys) > 0:
                 group_selectors, group_legends = frontend.split_by_keys(
-                    split_selector, group_keys, distinct_params
+                    split_selector, group_keys
                 )
             else:
                 group_selectors = [split_selector]
