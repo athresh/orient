@@ -1,97 +1,79 @@
-<p align="center">
-    <br>
-        &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-        <img src="https://github.com/decile-team/cords/blob/main/docs/source/imgs/cords_logo.png" width="500"/>
-    </br>
-    <br>
-        <strong> COResets and Data Subset selection </strong>
-    </br>
-</p>
+# ORIENT
 
-<p align="center">
-    <a href="https://github.com/decile-team/cords/blob/main/LICENSE.txt">
-        <img alt="GitHub" src="https://img.shields.io/github/license/decile-team/cords?color=blue">
-    </a>
-    <a href="https://decile.org/">
-        <img alt="Decile" src="https://img.shields.io/badge/website-online-green">
-    </a>  
-    <a href="https://cords.readthedocs.io/en/latest/">
-        <img alt="Documentation" src="https://img.shields.io/badge/docs-passing-brightgreen">
-    </a>
-    <a href="#">
-        <img alt="GitHub Stars" src="https://img.shields.io/github/stars/decile-team/cords">
-    </a>
-    <a href="#">
-        <img alt="GitHub Forks" src="https://img.shields.io/github/forks/decile-team/cords">
-    </a>
-</p>
+This is the implementation of the paper "ORIENT: Submodular Mutual Information Measures for Data Subset Selection under Distribution Shift." 
 
-<h3 align="center">
-<p>Reduce end to end training time from days to hours (or hours to minutes), and energy requirements/costs by an order of magnitude using coresets and data selection.
-</h3>
+The main runner file is `run_sl_smi.py`.
 
+```
+usage: run_sl_smi.py [-h] [--config_file CONFIG_FILE] [--smi_func_type SMI_FUNC_TYPE] [--query_size QUERY_SIZE]
+                     [--fraction FRACTION] [--select_every SELECT_EVERY] [--print_every PRINT_EVERY]
+                     [--save_every SAVE_EVERY] [--device DEVICE] [--num_epochs NUM_EPOCHS]
+                     [--source_domains SOURCE_DOMAINS] [--target_domains TARGET_DOMAINS]
+                     [--similarity_criterion SIMILARITY_CRITERION] [--selection_type SELECTION_TYPE]
 
-## In this README
+optional arguments:
+  -h, --help            show this help message and exit
+  --config_file         path to the config file 
+  --smi_func_type       SMI function to be used, options ["fl2mi", "gcmi", "logdetmi"]
+  --query_size          size of the query set i.e. target data 
+  --fraction            fraction of the source data to be used in the subset
+  --select_every        subset selection interval
+  --print_every         interval for evaluating and printing the performance on target data
+  --save_every          interval for saving the model checkpoint
+  --device              cpu/gpu
+  --num_epochs          total number of epochs
+  --source_domains      source domain, for eg. Real_World
+  --target_domains      target domain, for eg. Clipart
+  --similarity_criterion  Criterion for similarity (use default)
+  --selection_type      Selection type     
+```
 
-- [In this README](#in-this-readme)
-- [What is CORDS?](#what-is-cords)
-- [Installation](#installation)
-- [Next Steps](#next-steps)
-- [Documentation](#documentation)
+Some sample commands to run the code for CCSA on office-home dataset are mentioned below. Similar commands can be used to run d-sne setting.
 
 
+1. For Full
+```shell
+python run_sl_smi.py --config_file "configs/SL/config_full_ccsa_officehome.py" --source_domains "Real_World" --target_domains "Clipart" > full_ccsa_officehome_rc.txt
+```
+2. Random
 
-## What is CORDS?
+```shell
+python run_sl_smi.py --config_file "configs/SL/config_random_ccsa_officehome.py" --fraction "0.3"  --query_size 624 --source_domains "Real_World" --target_domains"Clipart" > random_ccsa_0.3_officehome_rc.txt
+```
 
-[CORDS](https://cords.readthedocs.io/en/latest/) is COReset and Data Selection library for making machine learning time, energy, cost, and compute efficient. CORDS is built on top of pytorch. Deep Learning systems are extremely compute intensive today with large turn around times, energy inefficiencies, higher costs and resourse requirements [1,2]. CORDS is an effort to make deep learning more energy, cost, resource and time efficient while not sacrificing accuracy. The following are the goals CORDS tries to achieve:
+3. ORIENT (FLMI)
 
-<p align="center"><i><b>Data Efficiency</b></i></p>
-<p align="center"><i><b>Reducing End to End Training Time</b></i></p>
-<p align="center"><i><b>Reducing Energy Requirement</b></i></p>
-<p align="center"><i><b>Faster Hyper-parameter tuning </b></i></p>
-<p align="center"><i><b>Reducing Resource (GPU) Requirement and Costs</b></i></p>
+```shell
+python run_sl_smi.py --config_file "configs/SL/config_smi_ccsa_officehome.py" --smi_func_type "fl2mi"  --fraction "0.3"  --query_size 624 --source_domains "Real_World"--target_domains "Clipart" > fl2mi_ccsa_0.3_officehome_rc.txt
+```
 
+4. GLISTER
 
-The primary purpose of CORDS is to select the right representative data subsets from massive datasets, and it does so iteratively. CORDS uses some recent advances in data subset selection and particularly, ideas of coresets and submodularity select such subsets. CORDS implements a number of state of the art data subset selection algorithms 
-and coreset algorithms. Some of the algorithms currently implemented with CORDS include:
+```shell
+python run_sl_smi.py --config_file "configs/SL/config_glister_ccsa_officehome.py" --fraction "0.3"  --query_size 624 --source_domains "Real_World" --target_domains"Clipart" > glister_ccsa_0.3_officehome_rc.txt
+```   
 
-- [GLISTER [3]](https://cords.readthedocs.io/en/latest/strategies/cords.selection_strategies.supervisedlearning.html#module-cords.selectionstrategies.supervisedlearning.glisterstrategy)
-- [GradMatch [4]](https://cords.readthedocs.io/en/latest/strategies/cords.selection_strategies.supervisedlearning.html#module-cords.selectionstrategies.supervisedlearning.ompgradmatchstrategy)
-- [CRAIG [4,5]](https://cords.readthedocs.io/en/latest/strategies/cords.selection_strategies.supervisedlearning.html#module-cords.selectionstrategies.supervisedlearning.craigstrategy)
-- [SubmodularSelection [6,7,8]](https://cords.readthedocs.io/en/latest/strategies/cords.selection_strategies.supervisedlearning.html#module-cords.selectionstrategies.supervisedlearning.submodularselectionstrategy) (Facility Location, Feature Based Functions, Coverage, Diversity)
-- [RandomSelection](https://cords.readthedocs.io/en/latest/strategies/cords.selection_strategies.supervisedlearning.html#module-cords.selectionstrategies.supervisedlearning.randomstrategy)
+5. GradMatch
 
-We are continuously incorporating newer and better algorithms into CORDS. Some of the features of CORDS includes:
-
-- Reproducability of SOTA in Data Selection and Coresets: Enable easy reproducability of SOTA described above. We are trying to also add more algorithms so if you have an algorithm you would like us to include, please let us know,.
-- Benchmarking: We have benchmarked CORDS (and the algorithms present right now) on several datasets including CIFAR-10, CIFAR-100, MNIST, SVHN and ImageNet. 
-- Ease of Use: One of the main goals of CORDS is that it is easy to use and add to CORDS. Feel free to contribute to CORDS!
-- Modular design: The data selection algorithms are separate from the training loop, thereby enabling modular design and also varied scenarios of utility.
-- Broad number of usecases: CORDS is currently implemented for simple image classification tasks and hyperparameter tuning, but we are working on integrating a number of additional use cases like object detection, speech recognition, semi-supervised learning, Auto-ML, etc.
-
-## Installation
-
-1. To install latest version of CORDS package using PyPI:
-
-    ```python
-    pip install -i https://test.pypi.org/simple/ cords
-    ```
-
-2. To install using source:
-
-    ```bash
-    git clone https://github.com/decile-team/cords.git
-    cd cords
-    pip install -r requirements/requirements.txt
-    ```
+```shell
+python run_sl_smi.py --config_file "configs/SL/config_gradmatch_ccsa_officehome.py" --fraction "0.3"  --query_size 624 --source_domains "Real_World" --target_domains "Clipart" --selection_type 'PerClassPerGradient'> gradmatch_ccsa_0.3_officehome_rc.txt
+```
 
 
-## Next Steps
-
-## Tutorials
-
-## Documentation
-
-The documentation for the latest version of CORDS can always be found [here](https://cords.readthedocs.io/en/latest/).
 
 
+## Citation
+
+If you build on this code or the ideas of this paper, please use the following citation.
+
+    @inproceedings{KaranamKKI22,
+     	title={ORIENT: Submodular Mutual Information Measures for Data Subset Selection under Distribution Shift}, 
+	    author={Athresh Karanam and Krishnateja Killamsetty and Harsha Kokel and Rishabh K Iyer}, 
+    	year={2022}, 
+		booktitle={NeurIPS},
+    }
+
+
+## Acknowledgements
+
+AK acknowledges the support by the NIH grant R01HD101246, HK gratefully acknowledges the support of the ARO award W911NF2010224. RI and KK would like to acknowledge support from NSF Grant Number IIS-2106937, a gift from Google Research, and the Adobe Data Science Research award. Authors would like to acknowledge Dr. Sriraam Natarajan for helpful discussions and support. The views and conclusions contained herein are those of the authors and should not be interpreted as necessarily representing the official policies or endorsements, either expressed or implied, of the ARO, NIH, NSF, Google Research, Adobe Data Science or the U.S. government.
